@@ -28,44 +28,15 @@ export fn _spAtlasPage_createTexture(self: [*c]spine_c.spAtlasPage, path: [*c]co
     const width: i32 = @intCast(image_data.width);
     const height: i32 = @intCast(image_data.height);
 
-    // Convert image to RGBA8 format
-    var rgba_pixels: []u8 = undefined;
-    switch (image_data.pixels) {
-        .rgba32 => |pixels| {
-            rgba_pixels = std.mem.sliceAsBytes(pixels);
-        },
-        .rgb24 => |pixels| {
-            // Convert RGB24 to RGBA32
-            rgba_pixels = allocator.alloc(u8, pixels.len * 4 / 3) catch {
-                std.log.err("Failed to allocate memory for RGBA conversion", .{});
-                return;
-            };
-            var i: usize = 0;
-            var j: usize = 0;
-            while (i < pixels.len) : (i += 1) {
-                rgba_pixels[j] = pixels[i].r; // R
-                rgba_pixels[j + 1] = pixels[i].g; // G
-                rgba_pixels[j + 2] = pixels[i].b; // B
-                rgba_pixels[j + 3] = 255; // A
-                j += 4;
-            }
-        },
-        else => {
-            std.log.err("Unsupported image format for texture: {s}", .{path_str});
-            return;
-        },
-    }
-    defer if (image_data.pixels != .rgba32) allocator.free(rgba_pixels);
-
-    // Create sokol texture
-    var texture_desc = sg.ImageDesc{
+    const image = sg.makeImage(.{
         .width = width,
         .height = height,
-        .pixel_format = .RGBA8,
-    };
-    texture_desc.data.subimage[0][0] = .{ .ptr = rgba_pixels.ptr, .size = rgba_pixels.len };
-
-    const image = sg.makeImage(texture_desc);
+        .data = init: {
+            var data = sg.ImageData{};
+            data.subimage[0][0] = sg.asRange(image_data.pixels.rgba32);
+            break :init data;
+        },
+    });
 
     // Store texture and dimensions in the atlas page per spine-c documentation
     if (self) |atlas_page| {
