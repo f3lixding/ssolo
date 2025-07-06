@@ -32,6 +32,7 @@ const Vertex = struct {
 const game_state = struct {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     var allocator: Allocator = undefined;
+    var image: sg.Image = undefined;
 
     var pip: sg.Pipeline = .{};
     var bind: sg.Bindings = .{};
@@ -60,10 +61,11 @@ export fn init() void {
         break :mix map;
     };
 
-    const image: *sg.Image = undefined;
-    util.loadAnimationData(allocator, "assets/alien-ess.atlas", animation_mix, image) catch |err| {
+    util.loadAnimationData(allocator, "assets/alien-ess.atlas", animation_mix, &game_state.image) catch |err| {
         std.log.err("Failed to load animation data: {}", .{err});
     };
+    const image_desc = sg.queryImageDesc(game_state.image);
+    std.log.info("Image desc: width={}, height={}, pixel_format={}", .{ image_desc.width, image_desc.height, image_desc.pixel_format });
 }
 
 export fn frame() void {

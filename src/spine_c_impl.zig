@@ -27,6 +27,7 @@ export fn _spAtlasPage_createTexture(self: [*c]spine_c.spAtlasPage, path: [*c]co
     // Get actual image dimensions
     const width: i32 = @intCast(image_data.width);
     const height: i32 = @intCast(image_data.height);
+    std.log.info("width={}, height={}", .{ width, height });
 
     const image = sg.makeImage(.{
         .width = width,
@@ -40,8 +41,14 @@ export fn _spAtlasPage_createTexture(self: [*c]spine_c.spAtlasPage, path: [*c]co
 
     // Store texture and dimensions in the atlas page per spine-c documentation
     if (self) |atlas_page| {
-        // we have to dereference the pointer prior to accessing the field because [*c] needs -> to be accessed.
-        atlas_page.*.rendererObject = @ptrFromInt(image.id);
+        // atlas is the parent of atlas page.
+        // The void* that occupies a rendererObject belongs to the atlas, not the atlas_page.
+        // The intention is that each page is to access the same atlas
+        if (atlas_page.*.atlas.*.rendererObject) |renderer_obj| {
+            std.log.info("logged", .{});
+            const image_ptr: *sg.Image = @ptrFromInt(@intFromPtr(renderer_obj));
+            image_ptr.* = image;
+        }
         atlas_page.*.width = width;
         atlas_page.*.height = height;
     }
