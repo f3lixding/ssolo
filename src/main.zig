@@ -55,7 +55,8 @@ export fn init() void {
             []struct { []const u8, []const u8 },
         ).init(allocator);
         const from_to_pairs = [_]struct { []const u8, []const u8 }{
-            .{ "idle", "run" },
+            .{ "hit", "death" },
+            .{ "run", "jump" },
         };
         map.put("0.1", @constCast(&from_to_pairs)) catch unreachable;
         break :mix map;
@@ -64,8 +65,6 @@ export fn init() void {
     util.loadAnimationData(allocator, "assets/alien-ess.atlas", animation_mix, &game_state.image) catch |err| {
         std.log.err("Failed to load animation data: {}", .{err});
     };
-    const image_desc = sg.queryImageDesc(game_state.image);
-    std.log.info("Image desc: width={}, height={}, pixel_format={}", .{ image_desc.width, image_desc.height, image_desc.pixel_format });
 }
 
 export fn frame() void {
@@ -75,7 +74,6 @@ export fn frame() void {
 }
 
 export fn cleanup() void {
-    std.log.err("ran", .{});
     if (builtin.mode == .Debug) {
         // TODO: need to actually surface the leak check here once we have event handler to run the cleanup
         _ = game_state.gpa.deinit();

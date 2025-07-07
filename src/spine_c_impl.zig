@@ -45,7 +45,6 @@ export fn _spAtlasPage_createTexture(self: [*c]spine_c.spAtlasPage, path: [*c]co
         // The void* that occupies a rendererObject belongs to the atlas, not the atlas_page.
         // The intention is that each page is to access the same atlas
         if (atlas_page.*.atlas.*.rendererObject) |renderer_obj| {
-            std.log.info("logged", .{});
             const image_ptr: *sg.Image = @ptrFromInt(@intFromPtr(renderer_obj));
             image_ptr.* = image;
         }
