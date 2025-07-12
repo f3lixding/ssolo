@@ -28,6 +28,7 @@ const game_state = struct {
     var allocator: Allocator = undefined;
     var skel_data: *spine_c.spSkeletonData = undefined;
     var skel: *spine_c.spSkeleton = undefined;
+    var animation_state: *spine_c.struct_spAnimationState = undefined;
 
     var pip: sg.Pipeline = .{};
     var bind: sg.Bindings = .{};
@@ -72,6 +73,11 @@ export fn init() void {
     };
 
     game_state.skel = spine_c.spSkeleton_create(game_state.skel_data);
+    const animation_state_data = spine_c.spAnimationStateData_create(game_state.skel_data);
+    animation_state_data.*.defaultMix = 0.5;
+    game_state.animation_state = spine_c.spAnimationState_create(animation_state_data);
+    const animation = spine_c.spSkeletonData_findAnimation(game_state.skel_data, "run");
+    _ = spine_c.spAnimationState_setAnimation(game_state.animation_state, 0, animation, 1);
 
     // Create shader and pipeline once during initialization
     game_state.pip = sg.makePipeline(.{
@@ -120,6 +126,9 @@ export fn init() void {
 
 export fn frame() void {
     sg.beginPass(.{ .action = game_state.pass_action, .swapchain = sglue.swapchain() });
+    spine_c.spAnimationState_update(game_state.animation_state, 0.01);
+    _ = spine_c.spAnimationState_apply(game_state.animation_state, game_state.skel);
+    spine_c.spSkeleton_updateWorldTransform(game_state.skel, spine_c.SP_PHYSICS_NONE);
     util.collectSkeletonVertices(game_state.skel);
     // binds and pip are applied in this function so we don't have to do it again outside of this
     util.renderCollectedVertices(

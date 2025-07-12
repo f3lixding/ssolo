@@ -90,7 +90,7 @@ pub fn collectSkeletonVertices(skel: *spine_c.spSkeleton) void {
     var i: usize = 0;
 
     while (i < upper_bound) : (i += 1) {
-        const slot = skel.slots[i];
+        const slot = skel.drawOrder[i];
         const attach = slot.*.attachment;
         if (attach) |attachment| {
             if (attachment.*.type == spine_c.SP_ATTACHMENT_REGION) {
@@ -134,7 +134,7 @@ pub fn collectSkeletonVertices(skel: *spine_c.spSkeleton) void {
                     region_attachment.uvs[3],
                     tint_r,
                     tint_g,
-                    tint_g,
+                    tint_b,
                     tint_a,
                     &total_vertex_count,
                 );
@@ -146,7 +146,7 @@ pub fn collectSkeletonVertices(skel: *spine_c.spSkeleton) void {
                     region_attachment.uvs[5],
                     tint_r,
                     tint_g,
-                    tint_g,
+                    tint_b,
                     tint_a,
                     &total_vertex_count,
                 );
@@ -158,7 +158,7 @@ pub fn collectSkeletonVertices(skel: *spine_c.spSkeleton) void {
                     region_attachment.uvs[5],
                     tint_r,
                     tint_g,
-                    tint_g,
+                    tint_b,
                     tint_a,
                     &total_vertex_count,
                 );
@@ -170,7 +170,7 @@ pub fn collectSkeletonVertices(skel: *spine_c.spSkeleton) void {
                     region_attachment.uvs[7],
                     tint_r,
                     tint_g,
-                    tint_g,
+                    tint_b,
                     tint_a,
                     &total_vertex_count,
                 );
@@ -182,7 +182,7 @@ pub fn collectSkeletonVertices(skel: *spine_c.spSkeleton) void {
                     region_attachment.uvs[1],
                     tint_r,
                     tint_g,
-                    tint_g,
+                    tint_b,
                     tint_a,
                     &total_vertex_count,
                 );
