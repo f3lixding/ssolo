@@ -27,7 +27,6 @@ export fn _spAtlasPage_createTexture(self: [*c]spine_c.spAtlasPage, path: [*c]co
     // Get actual image dimensions
     const width: i32 = @intCast(image_data.width);
     const height: i32 = @intCast(image_data.height);
-    std.log.info("width={}, height={}", .{ width, height });
 
     const image = sg.makeImage(.{
         .width = width,
