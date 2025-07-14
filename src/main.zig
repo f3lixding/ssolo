@@ -126,6 +126,7 @@ export fn init() void {
 
 export fn frame() void {
     sg.beginPass(.{ .action = game_state.pass_action, .swapchain = sglue.swapchain() });
+    game_state.skel.x += 1;
     spine_c.spAnimationState_update(game_state.animation_state, 0.01);
     _ = spine_c.spAnimationState_apply(game_state.animation_state, game_state.skel);
     spine_c.spSkeleton_updateWorldTransform(game_state.skel, spine_c.SP_PHYSICS_NONE);
