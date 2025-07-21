@@ -32,6 +32,20 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    // TODO: need to clean this up later
+    const util_test = b.addTest(.{
+        .root_source_file = b.path("src/util.zig"),
+        .target = target,
+        .optimize = std.builtin.OptimizeMode.Debug,
+    });
+    util_test.linkLibC();
+    util_test.linkLibrary(spine_c_lib.artifact("spine-c"));
+    util_test.addIncludePath(spine_c_lib.path("include"));
+
+    const util_test_step = b.step("test_util", "Run util unit test");
+    const run_util_test = b.addRunArtifact(util_test);
+    util_test_step.dependOn(&run_util_test.step);
+
     bin_to_add.linkLibrary(spine_c_lib.artifact("spine-c"));
     bin_to_add.addIncludePath(spine_c_lib.path("include"));
     bin_to_add.root_module.addImport("sokol", sokol_dep.module("sokol"));
@@ -73,3 +87,17 @@ pub fn run_sokol_shdc(
 
     return sokol_shdc;
 }
+
+// fn add_dep_to_test_in_file(
+//     b: *std.Build,
+//     test_to_add: *std.Build.Step.Compile,
+//     dep: *std.Build.Dependency,
+//     link_lib_c: bool,
+// ) void {
+//     if (link_lib_c) {
+//         test_to_add.linkLibC();
+//         // we're going to assume all include paths are "include"
+//         test_to_add.addIncludePath
+//     }
+//
+// }

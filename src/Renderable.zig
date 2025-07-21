@@ -8,6 +8,7 @@ const AllocPrintError = std.fmt.AllocPrintError;
 /// I am not sure if there is a better solution to this so I am going to stick with this for now.
 /// This does mean all types that implement this interface need to reference this file.
 pub const RenderableError = error{
+    InitError,
     NullSkeletonData,
     RenderError,
 } || AllocPrintError;
