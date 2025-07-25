@@ -6,13 +6,15 @@ const sokol = @import("sokol");
 const sg = sokol.gfx;
 const spc = util.spine_c;
 const shd = @import("../shaders/alien-ess.glsl.zig");
+const zigimg = @import("zigimg");
 
 const Renderable = @import("../Renderable.zig");
 const RenderableError = Renderable.RenderableError;
 const util = @import("../util.zig");
 const Vertex = util.Vertex;
+const assets = @import("assets");
 
-const ASSET_FILE_STEM: []const u8 = "alien-ess";
+const ASSET_FILE_STEM: []const u8 = "alien_ess";
 const MAX_ELEMENT: u64 = 100;
 const MAX_VERTICES_PER_ATTACHMENT = util.MAX_VERTICES_PER_ATTACHMENT;
 
@@ -31,15 +33,29 @@ pip: sg.Pipeline = undefined,
 
 pub fn init(self: *@This(), alloc: Allocator) RenderableError!void {
     const init_bundle = util.getInitBundle(
-        alloc,
         ASSET_FILE_STEM,
-        &self.sprite_sheet,
         0.5,
         0.2,
     ) catch |e| {
         std.log.err("Error creating init bundle for {s}: {any}", .{ ASSET_FILE_STEM, e });
         return RenderableError.InitError;
     };
+
+    const image_buffer = comptime blk: {
+        break :blk @field(assets, std.fmt.comptimePrint("{s}_png", .{ASSET_FILE_STEM}));
+    };
+    const image = zigimg.Image.fromMemory(alloc, image_buffer) catch {
+        return RenderableError.InitError;
+    };
+    self.sprite_sheet = sg.makeImage(.{
+        .width = @intCast(image.width),
+        .height = @intCast(image.height),
+        .data = init: {
+            var data = sg.ImageData{};
+            data.subimage[0][0] = sg.asRange(image.pixels.rgba32);
+            break :init data;
+        },
+    });
 
     self.skeleton_data = init_bundle.skeleton_data;
     self.animation_state_data = init_bundle.animation_state_data;

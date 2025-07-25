@@ -17,6 +17,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
     });
 
+    bin_to_add.root_module.addAnonymousImport("assets", .{
+        .root_source_file = b.path("assets/assets.zig"),
+    });
+
     const spine_c_lib = b.dependency("spine_c", .{
         .target = target,
         .optimize = optimize,

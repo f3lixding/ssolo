@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 const sg = @import("sokol").gfx;
 pub const shd = @import("shaders/alien-ess.glsl.zig");
+const assets = @import("assets");
 
 pub const spine_c = @cImport({
     @cInclude("spine/spine.h");
@@ -25,24 +26,31 @@ pub const InitBundle = struct {
 pub const MAX_VERTICES_PER_ATTACHMENT = 2048;
 
 pub fn getInitBundle(
-    alloc: Allocator,
-    asset_name: []const u8,
-    image_ptr: *sg.Image,
+    comptime asset_name: []const u8,
     default_mix: f32,
     scale: f32,
 ) !InitBundle {
-    // TODO: maybe we embed everything here so we don't have to read it?
-    const bin_path = try std.fmt.allocPrint(alloc, "assets/{s}.skel", .{asset_name});
-    defer alloc.free(bin_path);
-    const atlas_path = try std.fmt.allocPrint(alloc, "assets/{s}.atlas", .{asset_name});
-    defer alloc.free(atlas_path);
+    const atlas_data = comptime blk: {
+        const field_name = std.fmt.comptimePrint("{s}_atlas", .{asset_name});
+        break :blk @field(assets, field_name);
+    };
 
-    const atlas = spine_c.spAtlas_createFromFile(@ptrCast(atlas_path), @ptrCast(image_ptr));
+    const binary_data = comptime blk: {
+        const field_name = std.fmt.comptimePrint("{s}_skel", .{asset_name});
+        break :blk @field(assets, field_name);
+    };
+
+    const atlas = spine_c.spAtlas_create(
+        @ptrCast(atlas_data.ptr),
+        @intCast(atlas_data.len),
+        @ptrCast(""),
+        null,
+    );
     const binary = spine_c.spSkeletonBinary_create(atlas);
     defer spine_c.spSkeletonBinary_dispose(binary);
     binary.*.scale = scale;
 
-    const skeleton_data = spine_c.spSkeletonBinary_readSkeletonDataFile(binary, @ptrCast(bin_path));
+    const skeleton_data = spine_c.spSkeletonBinary_readSkeletonData(binary, @ptrCast(binary_data), binary_data.len);
     const animation_state_data = spine_c.spAnimationStateData_create(skeleton_data);
     animation_state_data.*.defaultMix = default_mix;
 
