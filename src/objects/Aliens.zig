@@ -7,6 +7,7 @@ const sg = sokol.gfx;
 const spc = util.spine_c;
 const shd = @import("../shaders/alien_ess.glsl.zig");
 const zigimg = @import("zigimg");
+const Event = sokol.app.Event;
 
 const Renderable = @import("../Renderable.zig");
 const RenderableError = Renderable.RenderableError;
@@ -128,6 +129,39 @@ pub fn render(self: *const @This()) RenderableError!void {
 pub fn deinit(self: *const @This(), alloc: Allocator) void {
     _ = self;
     _ = alloc;
+}
+
+pub fn inputEventHandle(self: *@This(), event: [*c]const Event) RenderableError!void {
+    // we'll update everything here for now
+    switch (event.*.type) {
+        .KEY_DOWN => {
+            const key_pressed = event.*.key_code;
+            // TODO: account for diagonals
+            const dxy: ?[2]f32 = blk: {
+                switch (key_pressed) {
+                    .S, .LEFT => break :blk .{ -1, 0 },
+                    .D, .DOWN => break :blk .{ 0, -1 },
+                    .E, .UP => break :blk .{ 0, 1 },
+                    .F, .RIGHT => break :blk .{ 1, 0 },
+                    else => break :blk null,
+                }
+            };
+
+            if (dxy) |dxy_| {
+                const dx = dxy_[0];
+                const dy = dxy_[1];
+
+                for (0..self.current_idx) |i| {
+                    // TODO: maybe make this a bit more ergonomic?
+                    self.collections[i].skeleton.x += dx;
+                    self.collections[i].skeleton.y += dy;
+                }
+            }
+        },
+        else => {
+            // ignore everything else for now
+        },
+    }
 }
 
 const Alien = struct {

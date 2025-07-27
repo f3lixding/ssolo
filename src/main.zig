@@ -29,20 +29,6 @@ var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const pass_action: sg.PassAction = .{ .colors = [_]sg.ColorAttachmentAction{ .{ .load_action = .CLEAR, .clear_value = .{ .r = 0.2, .g = 0.2, .b = 0.2, .a = 1.0 } }, .{}, .{}, .{} } };
 var renderables: [100]Renderable = undefined;
 var ren_idx: usize = 0;
-// const game_state = struct {
-//     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-//     var allocator: Allocator = undefined;
-//     var skel_data: *spine_c.spSkeletonData = undefined;
-//     var skel: *spine_c.spSkeleton = undefined;
-//     var animation_state: *spine_c.struct_spAnimationState = undefined;
-//
-//     var pip: sg.Pipeline = .{};
-//     var bind: sg.Bindings = .{};
-//     var pass_action: sg.PassAction = .{ .colors = [_]sg.ColorAttachmentAction{ .{ .load_action = .CLEAR, .clear_value = .{ .r = 0.2, .g = 0.2, .b = 0.2, .a = 1.0 } }, .{}, .{}, .{} } };
-//     var vertex_buffer: sg.Buffer = .{};
-//     var index_buffer: sg.Buffer = .{};
-//     var sampler: sg.Sampler = .{};
-// };
 
 export fn init() void {
     sg.setup(.{
@@ -67,7 +53,7 @@ export fn init() void {
     ren_idx += 1;
 
     for (0..ren_idx) |i| {
-        renderables[i].init_inner(allocator) catch unreachable;
+        renderables[i].initInner(allocator) catch unreachable;
     }
 
     // adding another one just for funzies
@@ -108,6 +94,7 @@ pub fn main() !void {
         .init_cb = init,
         .frame_cb = frame,
         .cleanup_cb = cleanup,
+        .event_cb = util.makeGlobalUserInputHandler(&renderables[0..100], &ren_idx),
         .width = WINDOW_HEIGHT,
         .height = WINDOW_HEIGHT,
         .sample_count = SAMPLE_COUNT,

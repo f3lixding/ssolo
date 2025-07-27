@@ -4,6 +4,9 @@ const assert = std.debug.assert;
 const sg = @import("sokol").gfx;
 pub const shd = @import("shaders/alien_ess.glsl.zig");
 const assets = @import("assets");
+const Event = @import("sokol").app.Event;
+const Renderable = @import("Renderable.zig");
+const RenderableError = Renderable.RenderableError;
 
 pub const spine_c = @cImport({
     @cInclude("spine/spine.h");
@@ -343,6 +346,24 @@ pub fn render(
     sg.applyPipeline(pip);
     sg.applyBindings(bind);
     sg.draw(0, @intCast(index_count), 1);
+}
+
+var cur_idx_ptr: *const usize = undefined;
+var captured_renderables: *const []Renderable = undefined;
+
+pub export fn makeGlobalUserInputHandler(renderables: *const []Renderable, cur_idx: *const usize) *const fn ([*c]const Event) callconv(.c) void {
+    cur_idx_ptr = cur_idx;
+    captured_renderables = renderables;
+
+    const cb_struct = struct {
+        pub export fn handleUserInput(event: [*c]const Event) void {
+            for (0..cur_idx_ptr.*) |i| {
+                captured_renderables.*[i].inputEventHandle(event) catch unreachable;
+            }
+        }
+    };
+
+    return cb_struct.handleUserInput;
 }
 
 test "mock test" {
