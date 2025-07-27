@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 const sg = @import("sokol").gfx;
-pub const shd = @import("shaders/alien-ess.glsl.zig");
+pub const shd = @import("shaders/alien_ess.glsl.zig");
 const assets = @import("assets");
 
 pub const spine_c = @cImport({

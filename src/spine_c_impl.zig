@@ -13,6 +13,7 @@ export fn _spUtil_readFile(path: [*c]const u8, length: [*c]c_int) [*c]u8 {
 
 // We have to break zig convention here and not include the allocator as part of the function signature
 // because this signature is defined by the library (which is written in c).
+// But if you are loading the image yourself (like we're doing) there is no need to implement this function at all.
 export fn _spAtlasPage_createTexture(self: [*c]spine_c.spAtlasPage, path: [*c]const u8) void {
     _ = self;
     _ = path;
@@ -49,9 +50,8 @@ export fn _spAtlasPage_createTexture(self: [*c]spine_c.spAtlasPage, path: [*c]co
     //         const image_ptr: *sg.Image = @ptrFromInt(@intFromPtr(renderer_obj));
     //         image_ptr.* = image;
     //     }
-    //     // You actually don't need to implement this function at all
-    //     // atlas_page.*.width = width;
-    //     // atlas_page.*.height = height;
+    //     atlas_page.*.width = width;
+    //     atlas_page.*.height = height;
     // }
 }
 

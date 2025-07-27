@@ -1,14 +1,10 @@
 const std = @import("std");
 
-// TODO: we can structure the folder in such a way that we can crawl for this list
-const ENTITY_NAMES = [_][]const u8{
-    "alien-ess",
-};
-
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const no_bin = b.option(bool, "no-bin", "skip emitting binary") orelse false;
+    const force_codegen = b.option(bool, "force-codegen", "force code gen") orelse false;
 
     const bin_to_add = b.addExecutable(.{
         .name = "ssolo",
@@ -16,6 +12,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .root_source_file = b.path("src/main.zig"),
     });
+
+    generate_asset_files(b, force_codegen) catch unreachable;
+    run_sokol_shdc(b, &bin_to_add.step, force_codegen) catch unreachable;
 
     bin_to_add.root_module.addAnonymousImport("assets", .{
         .root_source_file = b.path("assets/assets.zig"),
@@ -64,44 +63,181 @@ pub fn build(b: *std.Build) void {
     // run step
     const run_main = b.addRunArtifact(bin_to_add);
     b.step("run", "run main app").dependOn(&run_main.step);
-
-    // building of shader files
-    // TODO: scan for file metadata to see if they need to be run
-    for (ENTITY_NAMES) |name| {
-        const shdc = run_sokol_shdc(b, name);
-        bin_to_add.step.dependOn(&shdc.step);
-    }
 }
 
 pub fn run_sokol_shdc(
     b: *std.Build,
-    name: []const u8,
-) *std.Build.Step.Run {
-    const sokol_shdc = b.addSystemCommand(&.{
-        "sokol-shdc",
-        "-i",
-        b.fmt("src/shaders/{s}.glsl", .{name}),
-        "-o",
-        b.fmt("src/shaders/{s}.glsl.zig", .{name}),
-        "-l",
-        "glsl410:glsl300es:hlsl5:metal_macos:wgsl",
-        "-f",
-        "sokol_zig",
-    });
+    bin_step: *std.Build.Step,
+    force_codegen: bool,
+) !void {
+    const shaders_dir = try std.fs.cwd().openDir("src/shaders", .{ .iterate = true });
+    var walker = try shaders_dir.walk(b.allocator);
+    defer walker.deinit();
 
-    return sokol_shdc;
+    // [0]: .glsl mtime
+    // [1]: .zig mtime
+    var mtime_map = std.StringHashMap([2]i128).init(b.allocator);
+    defer mtime_map.deinit();
+
+    while (try walker.next()) |entry| {
+        const file_ext = std.fs.path.extension(entry.path);
+        const file_name = std.fs.path.stem(entry.path);
+
+        const lookup_key = key: {
+            if (std.mem.eql(u8, ".glsl", file_ext)) {
+                break :key file_name;
+            } else if (std.mem.eql(u8, ".zig", file_ext)) {
+                break :key file_name[0 .. file_name.len - ".glsl".len];
+            } else {
+                unreachable;
+            }
+        };
+
+        if (mtime_map.getPtr(lookup_key)) |mtimes| {
+            if (std.mem.eql(u8, ".glsl", file_ext)) {
+                mtimes[0] = (try shaders_dir.statFile(entry.path)).mtime;
+            } else {
+                mtimes[1] = (try shaders_dir.statFile(entry.path)).mtime;
+            }
+        } else {
+            var mtime: [2]i128 = .{ std.math.maxInt(i128), std.math.maxInt(i128) };
+            if (std.mem.eql(u8, ".glsl", file_ext)) {
+                mtime[0] = (try shaders_dir.statFile(entry.path)).mtime;
+            } else {
+                mtime[1] = (try shaders_dir.statFile(entry.path)).mtime;
+            }
+            try mtime_map.put(lookup_key, mtime);
+        }
+    }
+
+    var mtime_map_iter = mtime_map.iterator();
+    while (mtime_map_iter.next()) |entry| {
+        const glsl_mtime = entry.value_ptr[0];
+        const zig_mtime = entry.value_ptr[1];
+
+        if (force_codegen or glsl_mtime > zig_mtime) {
+            const name = entry.key_ptr.*;
+            std.log.info("Running shaders codegen for {s}", .{name});
+
+            const sokol_shdc = b.addSystemCommand(&.{
+                "sokol-shdc",
+                "-i",
+                b.fmt("src/shaders/{s}.glsl", .{name}),
+                "-o",
+                b.fmt("src/shaders/{s}.glsl.zig", .{name}),
+                "-l",
+                "glsl410:glsl300es:hlsl5:metal_macos:wgsl",
+                "-f",
+                "sokol_zig",
+            });
+
+            bin_step.dependOn(&sokol_shdc.step);
+        }
+    }
 }
 
-// fn add_dep_to_test_in_file(
-//     b: *std.Build,
-//     test_to_add: *std.Build.Step.Compile,
-//     dep: *std.Build.Dependency,
-//     link_lib_c: bool,
-// ) void {
-//     if (link_lib_c) {
-//         test_to_add.linkLibC();
-//         // we're going to assume all include paths are "include"
-//         test_to_add.addIncludePath
-//     }
-//
-// }
+fn generate_asset_files(b: *std.Build, force_codegen: bool) !void {
+    // first we need to scan the time stamps of the asset files
+    var assets_dir = try std.fs.cwd().openDir("assets", .{ .iterate = true });
+
+    const should_proceed = should_run: {
+        if (force_codegen) {
+            break :should_run force_codegen;
+        }
+
+        const assets_module_mtime = (try assets_dir.statFile("assets.zig")).mtime;
+        const latest_asset_mtime = date: {
+            var latest: i128 = 0;
+            var iterator = assets_dir.iterate();
+
+            while (try iterator.next()) |file| {
+                if (std.mem.eql(u8, "assets.zig", file.name)) {
+                    continue;
+                }
+                const stat = try assets_dir.statFile(file.name);
+                latest = @max(latest, stat.mtime);
+            }
+
+            break :date latest;
+        };
+
+        break :should_run latest_asset_mtime < assets_module_mtime;
+    };
+
+    if (!should_proceed) {
+        assets_dir.close();
+        return;
+    }
+
+    // We expect the assets to be named in the following ways:
+    // - {asset_name}.atlas
+    // - {asset_name}.png
+    // - {asset_name}.skel
+    // And we are also going to ignore anything that is suffixed with .zig in this folder
+    // We are also going to assume there are no folder in this directory
+
+    // This is a hashmap of K: asset name, ane values are array of Strings we are going to write
+    // The strings are assumed to end with new lines (so there is no need to append new lines after)
+    var asset_map = std.StringHashMap(std.ArrayList([]const u8)).init(b.allocator);
+    defer {
+        var iterator = asset_map.iterator();
+        while (iterator.next()) |entry| {
+            entry.value_ptr.*.deinit();
+        }
+        asset_map.deinit();
+    }
+    var walker = try assets_dir.walk(b.allocator);
+    defer walker.deinit();
+
+    while (try walker.next()) |entry| {
+        const file_ext = std.fs.path.extension(entry.path);
+        if (std.mem.eql(u8, ".zig", file_ext)) {
+            continue;
+        }
+
+        const file_name = std.fs.path.stem(entry.basename);
+        if (asset_map.getPtr(file_name)) |collection| {
+            // Note that we are assuming the names are valid variable names
+            // They cannot be kebab case
+            const file_ext_with_no_dot = file_ext[1..];
+            try collection.append(b.fmt(
+                "pub const {s}_{s} = @embedFile(\"{s}\");\n",
+                .{
+                    file_name,
+                    file_ext_with_no_dot,
+                    entry.basename,
+                },
+            ));
+        } else {
+            var collection = std.ArrayList([]const u8).init(b.allocator);
+            const file_ext_with_no_dot = file_ext[1..];
+            try collection.append(b.fmt(
+                "pub const {s}_{s} = @embedFile(\"{s}\");\n",
+                .{
+                    file_name,
+                    file_ext_with_no_dot,
+                    entry.basename,
+                },
+            ));
+            try asset_map.put(file_name, collection);
+        }
+    }
+
+    // Now we iterate through our map to write it to file
+    var content: []const u8 =
+        \\// THIS FILE IS GENERETED WITH BUILD SCRIPT
+        \\// DO NOT EDIT
+        \\
+    ;
+    var asset_map_iter = asset_map.iterator();
+    while (asset_map_iter.next()) |entry| {
+        const collection = entry.value_ptr.*;
+        const joined = try std.mem.join(b.allocator, "", collection.items);
+        content = b.fmt("{s}\n{s}", .{ content, joined });
+    }
+
+    try assets_dir.writeFile(.{
+        .sub_path = "assets.zig",
+        .data = content,
+    });
+}

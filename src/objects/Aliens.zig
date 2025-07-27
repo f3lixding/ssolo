@@ -5,7 +5,7 @@ const Allocator = std.mem.Allocator;
 const sokol = @import("sokol");
 const sg = sokol.gfx;
 const spc = util.spine_c;
-const shd = @import("../shaders/alien-ess.glsl.zig");
+const shd = @import("../shaders/alien_ess.glsl.zig");
 const zigimg = @import("zigimg");
 
 const Renderable = @import("../Renderable.zig");
