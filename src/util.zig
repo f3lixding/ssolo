@@ -113,11 +113,14 @@ pub fn update(self: anytype) void {
         assert(@hasField(T, "skeleton"));
         assert(@hasField(T, "world_vertices_pos"));
         assert(@hasField(T, "total_vertex_count"));
+        assert(@hasField(T, "should_animate"));
     }
 
     // first we need to update the animation state
-    spine_c.spAnimationState_update(self.animation_state, 0.01);
-    _ = spine_c.spAnimationState_apply(self.animation_state, self.skeleton);
+    if (self.should_animate) {
+        spine_c.spAnimationState_update(self.animation_state, 0.01);
+        _ = spine_c.spAnimationState_apply(self.animation_state, self.skeleton);
+    }
     spine_c.spSkeleton_updateWorldTransform(self.skeleton, spine_c.SP_PHYSICS_NONE);
     // and then we update vertex info
     self.total_vertex_count = 0;

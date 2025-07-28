@@ -153,9 +153,15 @@ pub fn inputEventHandle(self: *@This(), event: [*c]const Event) RenderableError!
 
                 for (0..self.current_idx) |i| {
                     // TODO: maybe make this a bit more ergonomic?
+                    self.collections[i].should_animate = true;
                     self.collections[i].skeleton.x += dx;
                     self.collections[i].skeleton.y += dy;
                 }
+            }
+        },
+        .KEY_UP => {
+            for (0..self.current_idx) |i| {
+                self.collections[i].should_animate = false;
             }
         },
         else => {
@@ -172,6 +178,7 @@ const Alien = struct {
     vertices: [MAX_VERTICES_PER_ATTACHMENT]Vertex = undefined,
     total_vertex_count: usize = 0,
     world_vertices_pos: [MAX_VERTICES_PER_ATTACHMENT]f32 = undefined,
+    should_animate: bool = false,
 
     pub fn update(self: *Alien) void {
         util.update(self);
