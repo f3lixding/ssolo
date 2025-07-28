@@ -8,6 +8,8 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 - [ ] Handling of in game events for different objects (or the interface of it)
 - [ ] Particle effects / individual shaders
 - [ ] Pushdown automata 
+- [ ] Different screens / mode
+- [ ] Sound
 
 ## DONE
 - [x] Texture flipping
