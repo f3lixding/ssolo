@@ -2,14 +2,17 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
-- [ ] Animation switching / pausing
-- [ ] Texture flipping
 - [ ] Fix memory leak
 - [ ] Draw order enforcement
 - [ ] Background rendering
+- [ ] Handling of in game events for different objects (or the interface of it)
+- [ ] Particle effects / individual shaders
+- [ ] Pushdown automata 
 
 ## DONE
-- [x] General event loop
+- [x] Texture flipping
+- [x] Animation switching / pausing
+- [x] General event loop for user input
 - [x] Use comptime to help us write `assets/assets.zig`
 - [x] Figure out how to write tests in files that references files that are in the parent directories
 - [x] Figure out how to write tests in files that utilizes C imports

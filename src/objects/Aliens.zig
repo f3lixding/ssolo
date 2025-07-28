@@ -156,6 +156,12 @@ pub fn inputEventHandle(self: *@This(), event: [*c]const Event) RenderableError!
                     self.collections[i].should_animate = true;
                     self.collections[i].skeleton.x += dx;
                     self.collections[i].skeleton.y += dy;
+
+                    if (dx > 0) {
+                        self.collections[i].skeleton.scaleX = 1.0;
+                    } else {
+                        self.collections[i].skeleton.scaleX = -1.0;
+                    }
                 }
             }
         },

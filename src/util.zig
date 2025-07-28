@@ -81,7 +81,7 @@ pub fn makePipeline(shader_desc: sg.ShaderDesc) sg.Pipeline {
             .compare = .ALWAYS,
             .write_enabled = false,
         },
-        .cull_mode = .BACK,
+        .cull_mode = .NONE,
         .colors = init: {
             var colors: [4]sg.ColorTargetState = undefined;
             var color = sg.ColorTargetState{};
