@@ -2,6 +2,8 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
+- [ ] Render attachment type outside of region attachment 
+- [ ] Pose changes
 - [ ] Draw order enforcement
 - [ ] Background rendering
 - [ ] Handling of in game events for different objects (or the interface of it)

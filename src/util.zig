@@ -101,6 +101,7 @@ pub fn makePipeline(shader_desc: sg.ShaderDesc) sg.Pipeline {
 /// spine_c specific updates.
 /// To be called prior to instance specific updates that are not spine_c specific.
 /// Also note that this does not take into account attachment specific update
+/// TODO: accept physics related params
 pub fn update(self: anytype) void {
     // negative space
     const PtrInfo = @typeInfo(@TypeOf(self));
@@ -129,7 +130,7 @@ pub fn update(self: anytype) void {
     var i: usize = 0;
 
     while (i < upper_bound) : (i += 1) {
-        const slot = self.skeleton.drawOrder[i];
+        const slot: [*c]spine_c.spSlot = self.skeleton.drawOrder[i];
         const attach = slot.*.attachment;
         if (attach) |attachment| {
             if (attachment.*.type == spine_c.SP_ATTACHMENT_REGION) {
@@ -147,10 +148,6 @@ pub fn update(self: anytype) void {
                     0,
                     2,
                 );
-                // const atlas_region = @as(*spine_c.spAtlasRegion, @ptrCast(@alignCast(region_attachment.*.rendererObject)));
-                // const atlas_page = atlas_region.*.page;
-                // const renderer_obj = atlas_page.*.atlas.*.rendererObject.?;
-                // texture = @ptrCast(@alignCast(renderer_obj));
 
                 // Create 2 triangles, with 3 vertices each from the region's
                 // world vertex positions and its UV coordinates (in the range [0-1]).
@@ -232,7 +229,51 @@ pub fn update(self: anytype) void {
                     &self.total_vertex_count,
                 );
             } else if (attachment.*.type == spine_c.SP_ATTACHMENT_MESH) {
-                // noop for now. not sure what there is to do here.
+                const mesh: *spine_c.spMeshAttachment = @ptrCast(@alignCast(attachment));
+
+                const tint_r: f32 = self.skeleton.color.r * slot.*.color.r * mesh.color.r;
+                const tint_g: f32 = self.skeleton.color.g * slot.*.color.g * mesh.color.g;
+                const tint_b: f32 = self.skeleton.color.b * slot.*.color.b * mesh.color.b;
+                const tint_a: f32 = self.skeleton.color.a * slot.*.color.a * mesh.color.a;
+
+                // Check the number of vertices in the mesh attachment. If it is bigger
+                // than our scratch buffer, we don't render the mesh. We do this here
+                // for simplicity, in production you want to reallocate the scratch buffer
+                // to fit the mesh.
+                if (mesh.super.worldVerticesLength > MAX_VERTICES_PER_ATTACHMENT) continue;
+
+                // Computed the world vertices positions for the vertices that make up
+                // the mesh attachment. This assumes the world transform of the
+                // bone to which the slot (and hence attachment) is attached has been calculated
+                // before rendering via spSkeleton_updateWorldTransform
+                spine_c.spVertexAttachment_computeWorldVertices(
+                    spine_c.SUPER(mesh),
+                    slot,
+                    0,
+                    mesh.super.worldVerticesLength,
+                    @ptrCast(&self.world_vertices_pos[0]),
+                    0,
+                    2,
+                );
+
+                // In the example (https://esotericsoftware.com/spine-c#Implementing-Rendering) this is where texture was retrieved.
+                // But because we are handling the loading of texture ourselves we don't really need to be worried about it
+                const triangle_count: usize = @intCast(mesh.trianglesCount);
+                for (0..triangle_count) |j| {
+                    const index: usize = mesh.triangles[j] << 1;
+                    addVertex(
+                        self,
+                        self.world_vertices_pos[index],
+                        self.world_vertices_pos[index + 1],
+                        mesh.uvs[index],
+                        mesh.uvs[index + 1],
+                        tint_r,
+                        tint_g,
+                        tint_b,
+                        tint_a,
+                        &self.total_vertex_count,
+                    );
+                }
             }
         }
     }
