@@ -14,11 +14,16 @@ pub const RenderableError = error{
     RenderError,
 } || AllocPrintError;
 
+alloc: std.mem.Allocator = undefined,
+
+/// Must have fields
 ptr: *anyopaque,
 initFnPtr: *const fn (ptr: *anyopaque, alloc: std.mem.Allocator) RenderableError!void,
 updateFnPtr: *const fn (ptr: *anyopaque, dt: f32) RenderableError!void,
 renderFnPtr: *const fn (ptr: *const anyopaque) RenderableError!void,
+deinitFnPtr: *const fn (ptr: *anyopaque) void,
 
+/// Optional fields (the interface would assign something to it but it won't try to enforce it on the anyopaque)
 inputEventHandleFnPtr: *const fn (ptr: *anyopaque, event: [*c]const Event) RenderableError!void,
 
 pub fn init(inner_ptr: anytype) !@This() {
@@ -40,6 +45,11 @@ pub fn init(inner_ptr: anytype) !@This() {
             return self.render();
         }
 
+        pub fn deinit(ptr: *anyopaque) void {
+            const self: T = @constCast(@ptrCast(@alignCast(ptr)));
+            self.deinit();
+        }
+
         pub fn inputEventHandle(ptr: *anyopaque, event: [*c]const Event) RenderableError!void {
             const self: T = @ptrCast(@alignCast(ptr));
             // this has to be a pointer so there is no need for switch casing
@@ -55,12 +65,18 @@ pub fn init(inner_ptr: anytype) !@This() {
         .updateFnPtr = gen.update,
         .renderFnPtr = gen.render,
         .initFnPtr = gen.init,
+        .deinitFnPtr = gen.deinit,
         .inputEventHandleFnPtr = gen.inputEventHandle,
     };
 }
 
 pub fn initInner(self: *@This(), alloc: std.mem.Allocator) !void {
+    self.alloc = alloc;
     return self.initFnPtr(self.ptr, alloc);
+}
+
+pub fn deinit(self: *@This()) void {
+    self.deinitFnPtr(self.ptr);
 }
 
 pub fn update(self: *@This(), dt: f32) !void {

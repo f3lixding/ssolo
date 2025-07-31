@@ -2,7 +2,6 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
-- [ ] Fix memory leak
 - [ ] Draw order enforcement
 - [ ] Background rendering
 - [ ] Handling of in game events for different objects (or the interface of it)
@@ -10,8 +9,10 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 - [ ] Pushdown automata 
 - [ ] Different screens / mode
 - [ ] Sound
+- [ ] Fullscreen / window mode
 
 ## DONE
+- [x] Fix memory leak
 - [x] Texture flipping
 - [x] Animation switching / pausing
 - [x] General event loop for user input

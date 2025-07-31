@@ -24,6 +24,7 @@ const AlienError = error{Full};
 // we'll use a predetermined length for now
 // in the future we shall perhaps make this struct a generic that takes this in as a parameter
 collections: [MAX_ELEMENT]Alien = undefined,
+alloc: std.mem.Allocator = undefined,
 current_idx: usize = 0,
 skeleton_data: *spc.struct_spSkeletonData = undefined,
 animation_state_data: *spc.struct_spAnimationStateData = undefined,
@@ -45,9 +46,11 @@ pub fn init(self: *@This(), alloc: Allocator) RenderableError!void {
     const image_buffer = comptime blk: {
         break :blk @field(assets, std.fmt.comptimePrint("{s}_png", .{ASSET_FILE_STEM}));
     };
-    const image = zigimg.Image.fromMemory(alloc, image_buffer) catch {
+    var image = zigimg.Image.fromMemory(alloc, image_buffer) catch {
         return RenderableError.InitError;
     };
+    defer image.deinit();
+
     self.sprite_sheet = sg.makeImage(.{
         .width = @intCast(image.width),
         .height = @intCast(image.height),
@@ -73,6 +76,8 @@ pub fn init(self: *@This(), alloc: Allocator) RenderableError!void {
             },
         }
     };
+
+    self.alloc = alloc;
 }
 
 pub fn add_instance(self: *@This(), init_x: f32, init_y: f32) AlienError!void {
@@ -126,9 +131,8 @@ pub fn render(self: *const @This()) RenderableError!void {
     }
 }
 
-pub fn deinit(self: *const @This(), alloc: Allocator) void {
-    _ = self;
-    _ = alloc;
+pub fn deinit(self: *@This()) void {
+    self.alloc.destroy(self);
 }
 
 pub fn inputEventHandle(self: *@This(), event: [*c]const Event) RenderableError!void {
