@@ -16,7 +16,7 @@ const Vertex = util.Vertex;
 const assets = @import("assets");
 
 const ASSET_FILE_STEM: []const u8 = "alien_ess";
-const MAX_ELEMENT: u64 = 100;
+const MAX_ELEMENT: u64 = 10000;
 const MAX_VERTICES_PER_ATTACHMENT = util.MAX_VERTICES_PER_ATTACHMENT;
 
 const AlienError = error{Full};
@@ -96,8 +96,10 @@ pub fn add_instance(self: *@This(), init_x: f32, init_y: f32) AlienError!void {
         .animation_state = init: {
             const state = spc.spAnimationState_create(self.animation_state_data);
             // we'll start with running
-            const animation = spc.spSkeletonData_findAnimation(self.skeleton_data, "run");
-            _ = spc.spAnimationState_setAnimation(state, 0, animation, 1);
+            const animation = spc.spSkeletonData_findAnimation(self.skeleton_data, "hit");
+            _ = spc.spAnimationState_setAnimation(state, 0, animation, 0);
+
+            state.*.listener = listener;
             break :init state;
         },
         .vertex_buffer = sg.makeBuffer(.{
@@ -109,9 +111,38 @@ pub fn add_instance(self: *@This(), init_x: f32, init_y: f32) AlienError!void {
             .size = MAX_VERTICES_PER_ATTACHMENT * @sizeOf(u16),
         }),
     };
+    to_add.animation_state.rendererObject = @ptrCast(&self.collections[self.current_idx]);
 
     self.collections[self.current_idx] = to_add;
     self.current_idx += 1;
+}
+
+pub export fn listener(
+    animation_state: [*c]spc.spAnimationState,
+    event_type: spc.spEventType,
+    entry: [*c]spc.spTrackEntry,
+    event: [*c]spc.spEvent,
+) void {
+    _ = event;
+    const is_looping = entry.*.loop != 0;
+    // for now we only care about animation end for things that are not looping
+    if (is_looping)
+        return;
+
+    const is_ending = event_type == spc.SP_ANIMATION_COMPLETE;
+    if (!is_ending)
+        return;
+
+    const c_str_name = entry.*.animation.*.name;
+    const animation_name: []const u8 = std.mem.span(c_str_name);
+    if (!std.mem.eql(u8, animation_name, "hit"))
+        return;
+
+    const alien: *Alien = @ptrCast(@alignCast(animation_state.*.rendererObject));
+    alien.in_transition = false;
+
+    const run = spc.spSkeletonData_findAnimation(alien.skeleton.*.data, "run");
+    _ = spc.spAnimationState_setAnimation(animation_state, 0, run, 1);
 }
 
 pub fn update(self: *@This(), dt: f32) RenderableError!void {
@@ -140,38 +171,68 @@ pub fn inputEventHandle(self: *@This(), event: [*c]const Event) RenderableError!
     switch (event.*.type) {
         .KEY_DOWN => {
             const key_pressed = event.*.key_code;
-            // TODO: account for diagonals
-            const dxy: ?[2]f32 = blk: {
-                switch (key_pressed) {
-                    .S, .LEFT => break :blk .{ -1, 0 },
-                    .D, .DOWN => break :blk .{ 0, -1 },
-                    .E, .UP => break :blk .{ 0, 1 },
-                    .F, .RIGHT => break :blk .{ 1, 0 },
-                    else => break :blk null,
-                }
-            };
+            var dxy: ?[2]f32 = null;
+
+            switch (key_pressed) {
+                .S, .LEFT => {
+                    dxy = .{ -1, 0 };
+                },
+                .D, .DOWN => {
+                    dxy = .{ 0, -1 };
+                },
+                .E, .UP => {
+                    dxy = .{ 0, 1 };
+                },
+                .F, .RIGHT => {
+                    dxy = .{ 1, 0 };
+                },
+                .SPACE => {
+                    const init_x = std.crypto.random.float(f32) * 800.0 - 400.0;
+                    const init_y = std.crypto.random.float(f32) * 600.0 - 300.0;
+
+                    self.add_instance(init_x, init_y) catch {
+                        return RenderableError.RenderError;
+                    };
+                },
+                .BACKSPACE => {
+                    if (self.current_idx > 0) {
+                        self.current_idx -= 1;
+                        const to_remove = &self.collections[self.current_idx];
+                        to_remove.deinit();
+                    }
+                },
+                else => {},
+            }
 
             if (dxy) |dxy_| {
                 const dx = dxy_[0];
                 const dy = dxy_[1];
 
                 for (0..self.current_idx) |i| {
-                    // TODO: maybe make this a bit more ergonomic?
-                    self.collections[i].should_animate = true;
-                    self.collections[i].skeleton.x += dx;
-                    self.collections[i].skeleton.y += dy;
+                    const to_render = &self.collections[i];
+
+                    if (to_render.in_transition) {
+                        continue;
+                    }
+
+                    to_render.should_animate = true;
+                    to_render.skeleton.x += dx;
+                    to_render.skeleton.y += dy;
 
                     if (dx > 0) {
-                        self.collections[i].skeleton.scaleX = 1.0;
+                        to_render.skeleton.scaleX = 1.0;
                     } else {
-                        self.collections[i].skeleton.scaleX = -1.0;
+                        to_render.skeleton.scaleX = -1.0;
                     }
                 }
             }
         },
         .KEY_UP => {
             for (0..self.current_idx) |i| {
-                self.collections[i].should_animate = false;
+                const alien = &self.collections[i];
+                if (!alien.in_transition) {
+                    self.collections[i].should_animate = false;
+                }
             }
         },
         else => {
@@ -188,7 +249,8 @@ const Alien = struct {
     vertices: [MAX_VERTICES_PER_ATTACHMENT]Vertex = undefined,
     total_vertex_count: usize = 0,
     world_vertices_pos: [MAX_VERTICES_PER_ATTACHMENT]f32 = undefined,
-    should_animate: bool = false,
+    should_animate: bool = true,
+    in_transition: bool = true,
 
     pub fn update(self: *Alien) void {
         util.update(self);
@@ -201,5 +263,12 @@ const Alien = struct {
         sampler: sg.Sampler,
     ) !void {
         util.render(self, texture, pip, sampler);
+    }
+
+    pub fn deinit(self: Alien) void {
+        sg.destroyBuffer(self.vertex_buffer);
+        sg.destroyBuffer(self.index_buffer);
+        spc.spSkeleton_dispose(self.skeleton);
+        spc.spAnimationState_dispose(self.animation_state);
     }
 };

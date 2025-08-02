@@ -87,7 +87,7 @@ pub fn makePipeline(shader_desc: sg.ShaderDesc) sg.Pipeline {
             var color = sg.ColorTargetState{};
             color.blend = .{
                 .enabled = true,
-                .src_factor_rgb = .SRC_ALPHA,
+                .src_factor_rgb = .ONE,
                 .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
                 .src_factor_alpha = .ONE,
                 .dst_factor_alpha = .ONE_MINUS_SRC_ALPHA,

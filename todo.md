@@ -2,7 +2,7 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
-- [ ] Render attachment type outside of region attachment 
+- [ ] Experiment with animation event
 - [ ] Pose changes
 - [ ] Draw order enforcement
 - [ ] Background rendering
@@ -14,6 +14,7 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 - [ ] Fullscreen / window mode
 
 ## DONE
+- [x] Render attachment type outside of region attachment 
 - [x] Fix memory leak
 - [x] Texture flipping
 - [x] Animation switching / pausing

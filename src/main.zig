@@ -35,6 +35,11 @@ export fn init() void {
     sg.setup(.{
         .environment = sglue.environment(),
         .logger = .{ .func = slog.func },
+        .buffer_pool_size = 1024,
+        .image_pool_size = 256,
+        .sampler_pool_size = 128,
+        .shader_pool_size = 64,
+        .pipeline_pool_size = 128,
     });
 
     allocator = if (builtin.mode != .Debug)
@@ -100,7 +105,7 @@ pub fn main() !void {
         .frame_cb = frame,
         .cleanup_cb = cleanup,
         .event_cb = util.makeGlobalUserInputHandler(&renderables[0..100], &ren_idx),
-        .width = WINDOW_HEIGHT,
+        .width = WINDOW_WIDTH,
         .height = WINDOW_HEIGHT,
         .sample_count = SAMPLE_COUNT,
         .icon = .{ .sokol_default = true },
