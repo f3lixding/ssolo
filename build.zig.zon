@@ -17,6 +17,7 @@
             .hash = "zigimg-0.1.0-8_eo2qClEgC8dTSiSO6vqGe7mdtIkobGi-Uc4d0Eo7_2",
         },
         .spine_c = .{ .path = "pkg/spine-c" },
+        .pda = .{ .path = "pkg/pda" },
     },
     .paths = .{
         "build.zig",

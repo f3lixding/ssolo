@@ -2,18 +2,18 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
-- [ ] Experiment with animation event
-- [ ] Pose changes
+- [ ] Generic, standalone pushdown automata
 - [ ] Draw order enforcement
 - [ ] Background rendering
 - [ ] Handling of in game events for different objects (or the interface of it)
 - [ ] Particle effects / individual shaders
-- [ ] Pushdown automata 
 - [ ] Different screens / mode
 - [ ] Sound
 - [ ] Fullscreen / window mode
+- [ ] Pose changes
 
 ## DONE
+- [x] Experiment with animation event
 - [x] Render attachment type outside of region attachment 
 - [x] Fix memory leak
 - [x] Texture flipping

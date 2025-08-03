@@ -35,6 +35,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const pda_dep = b.dependency("pda", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     // TODO: need to clean this up later
     const util_test = b.addTest(.{
         .root_source_file = b.path("src/util.zig"),
@@ -53,6 +58,7 @@ pub fn build(b: *std.Build) void {
     bin_to_add.addIncludePath(spine_c_lib.path("include"));
     bin_to_add.root_module.addImport("sokol", sokol_dep.module("sokol"));
     bin_to_add.root_module.addImport("zigimg", zigimg_dep.module("zigimg"));
+    bin_to_add.root_module.addImport("pda", pda_dep.module("pda"));
 
     if (!no_bin) {
         b.installArtifact(bin_to_add);
