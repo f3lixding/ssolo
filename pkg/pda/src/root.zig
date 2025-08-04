@@ -85,6 +85,8 @@ test "overall test" {
         // Aliasing the type here for convenience
         pub const Transition = Pda(TestState, TestSymbol).Transition;
         pub fn transFn(current_state: TestState, incoming: TestSymbol, top_of_stack: ?TestSymbol) ?Transition {
+            // Worth noting is that in this scenario we are only pushing when we are not hitting .Esc
+            // And the symbol we are pushing is "lagging" behind the current state (i.e. we are pushing the corresponding symbol onto the stack once the current state is being replaced)
             const symbol_to_push: ?TestSymbol = push: {
                 switch (current_state) {
                     .ButtonConfig => break :push .ButtonConfigRegister,
