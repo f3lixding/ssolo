@@ -14,6 +14,7 @@ const spine_c = @cImport({
 
 const Renderable = @import("Renderable.zig");
 const Aliens = @import("objects/Aliens.zig");
+const Cursor = @import("Cursor.zig").Cursor;
 
 const pda = @import("pda");
 
@@ -31,6 +32,7 @@ const pass_action: sg.PassAction = .{ .colors = [_]sg.ColorAttachmentAction{ .{ 
 var renderables: [100]Renderable = undefined;
 var ren_idx: usize = 0;
 var allocator: std.mem.Allocator = undefined;
+var cursor: Cursor = undefined;
 
 export fn init() void {
     sg.setup(.{
@@ -63,6 +65,10 @@ export fn init() void {
         renderables[i].initInner(allocator) catch unreachable;
     }
 
+    // initialize custom cursor and hide OS cursor
+    cursor.init(allocator) catch unreachable;
+    sapp.showMouse(false);
+
     // adding another one just for funzies
     aliens.add_instance(50.0, 50.0) catch |e| {
         std.log.err("Error adding another instance: {any}", .{e});
@@ -83,6 +89,8 @@ export fn frame() void {
             unreachable;
         };
     }
+    // render custom cursor last so it overlays everything
+    cursor.render();
     sg.endPass();
     sg.commit();
 }
@@ -92,6 +100,7 @@ export fn cleanup() void {
     for (0..ren_idx) |i| {
         renderables[i].deinit();
     }
+    cursor.deinit();
     if (builtin.mode == .Debug) {
         // TODO: need to actually surface the leak check here once we have event handler to run the cleanup
         _ = gpa.deinit();

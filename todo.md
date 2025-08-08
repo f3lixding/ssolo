@@ -2,7 +2,7 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
-- [ ] Generic, standalone pushdown automata
+- [ ] Custom mouse cursor
 - [ ] Draw order enforcement
 - [ ] Background rendering
 - [ ] Handling of in game events for different objects (or the interface of it)
@@ -13,6 +13,7 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 - [ ] Pose changes
 
 ## DONE
+- [x] Generic, standalone pushdown automata
 - [x] Experiment with animation event
 - [x] Render attachment type outside of region attachment 
 - [x] Fix memory leak
