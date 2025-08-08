@@ -87,7 +87,7 @@ pub fn run_sokol_shdc(
 
     while (try walker.next()) |entry| {
         const file_ext = std.fs.path.extension(entry.path);
-        const file_name = std.fs.path.stem(entry.path);
+        const file_name = try b.allocator.dupe(u8, std.fs.path.stem(entry.path));
 
         const lookup_key = key: {
             if (std.mem.eql(u8, ".glsl", file_ext)) {
@@ -201,7 +201,10 @@ fn generate_asset_files(b: *std.Build, force_codegen: bool) !void {
             continue;
         }
 
-        const file_name = std.fs.path.stem(entry.basename);
+        // We need to dupe it here because [std.fs.path.stem] only returns the pointer
+        // Reminder that the key of the hashmap isn't actually of type String (there is no string type in zig)
+        // You are literally just storing a fat pointer
+        const file_name = try b.allocator.dupe(u8, std.fs.path.stem(entry.basename));
         if (asset_map.getPtr(file_name)) |collection| {
             // Note that we are assuming the names are valid variable names
             // They cannot be kebab case

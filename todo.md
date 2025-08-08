@@ -3,11 +3,12 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 
 ## TODO
 - [ ] Custom mouse cursor
+- [ ] Different screens / mode (Menu screen)
+- [ ] Add states to alternate screens
 - [ ] Draw order enforcement
 - [ ] Background rendering
 - [ ] Handling of in game events for different objects (or the interface of it)
 - [ ] Particle effects / individual shaders
-- [ ] Different screens / mode
 - [ ] Sound
 - [ ] Fullscreen / window mode
 - [ ] Pose changes

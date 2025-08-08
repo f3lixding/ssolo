@@ -394,9 +394,6 @@ pub fn render(
 
 var cur_idx_ptr: *const usize = undefined;
 var captured_renderables: *const []Renderable = undefined;
-// current mouse position in framebuffer pixels
-pub var mouse_x: f32 = 0.0;
-pub var mouse_y: f32 = 0.0;
 
 pub export fn makeGlobalUserInputHandler(renderables: *const []Renderable, cur_idx: *const usize) *const fn ([*c]const Event) callconv(.c) void {
     cur_idx_ptr = cur_idx;
@@ -404,16 +401,6 @@ pub export fn makeGlobalUserInputHandler(renderables: *const []Renderable, cur_i
 
     const cb_struct = struct {
         pub export fn handleUserInput(event: [*c]const Event) void {
-            // keep track of the latest mouse position for rendering a custom cursor
-            switch (event.*.type) {
-                .MOUSE_MOVE => {
-                    // event mouse_x/y are in framebuffer pixels
-                    mouse_x = event.*.mouse_x;
-                    mouse_y = event.*.mouse_y;
-                },
-                else => {},
-            }
-
             for (0..cur_idx_ptr.*) |i| {
                 captured_renderables.*[i].inputEventHandle(event) catch unreachable;
             }
