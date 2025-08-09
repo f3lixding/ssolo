@@ -76,8 +76,8 @@ export fn init() void {
         renderables[i].initInner(allocator) catch unreachable;
     }
 
-    // initialize custom cursor and hide OS cursor
     sapp.showMouse(false);
+    sapp.lockMouse(true);
 
     // adding another one just for funzies
     aliens.add_instance(50.0, 50.0) catch |e| {

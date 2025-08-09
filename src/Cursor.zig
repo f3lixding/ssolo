@@ -27,7 +27,7 @@ left_click_image: ImageBundle = undefined,
 right_click_image: ImageBundle = undefined,
 mx: f32 = 0.0,
 my: f32 = 0.0,
-y_invert: bool = false,
+y_invert: bool = true,
 x_invert: bool = false,
 button_state: ButtonState = .Idle,
 sampler: sg.Sampler = undefined,
@@ -168,6 +168,8 @@ pub fn render(self: *const @This()) void {
         }
     };
 
+    // Reminder that the vertex buffer has a min of -1.0 and a max of 1.0 for both axis
+    // Thus you would need to normalize it
     const current_width: f32 = @floatFromInt(sokol.app.width());
     const current_height: f32 = @floatFromInt(sokol.app.height());
     const img_height = @as(f32, @floatFromInt(current_img.height));
@@ -175,8 +177,10 @@ pub fn render(self: *const @This()) void {
     const nh: f32 = img_height / current_height;
     const nw: f32 = img_width / current_width;
 
-    const nx: f32 = self.mx / (current_width * 0.5);
-    const ny: f32 = self.my / (current_height * 0.5);
+    const x_invert: f32 = if (self.x_invert) -1.0 else 1.0;
+    const y_invert: f32 = if (self.y_invert) -1.0 else 1.0;
+    const nx: f32 = x_invert * self.mx / (current_width * 0.5);
+    const ny: f32 = y_invert * (self.my / (current_height * 0.5));
 
     const vertices = [_]Vertex{
         // zig fmt: off
@@ -216,8 +220,15 @@ pub fn render(self: *const @This()) void {
 pub fn inputEventHandle(self: *@This(), event: [*c]const Event) RenderableError!void {
     switch (event.*.type) {
         .MOUSE_MOVE => {
-            self.mx = event.*.mouse_x;
-            self.my = event.*.mouse_y;
+            const half_w = @as(f32, @floatFromInt(sokol.app.width())) / 2.0;
+            const half_h = @as(f32, @floatFromInt(sokol.app.height())) / 2.0;
+            const new_x: f32 = self.mx + event.*.mouse_dx;
+            const x_mul: f32 = if (new_x >= 0) 1.0 else -1.0;
+            const new_y: f32 = self.my + event.*.mouse_dy;
+            const y_mul: f32 = if (new_y >= 0) 1.0 else -1.0;
+
+            self.mx = if (@abs(new_x) > half_w) x_mul * half_w else new_x;
+            self.my = if (@abs(new_y) > half_h) y_mul * half_h else new_y;
         },
         .MOUSE_DOWN => {
             // TODO: account for when multiple mouse buttons are pressed
