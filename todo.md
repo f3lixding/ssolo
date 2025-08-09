@@ -4,6 +4,7 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 ## TODO
 - [ ] Custom mouse cursor
 - [ ] Different screens / mode (Menu screen)
+- [ ] Decouple util functions from alien asset
 - [ ] Add states to alternate screens
 - [ ] Draw order enforcement
 - [ ] Background rendering
