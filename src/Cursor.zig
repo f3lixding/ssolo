@@ -2,8 +2,7 @@ const std = @import("std");
 const sokol = @import("sokol");
 const sg = sokol.gfx;
 const shd = @import("shaders/cursor.glsl.zig");
-const util = @import("util.zig");
-const Vertex = util.Vertex;
+const Vertex = @import("util.zig").Vertex;
 const assets = @import("assets");
 const zigimg = @import("zigimg");
 const Event = @import("sokol").app.Event;
@@ -50,8 +49,8 @@ pub fn init(self: *@This(), alloc: std.mem.Allocator) RenderableError!void {
         defer image.deinit();
 
         const sg_image = sg.makeImage(.{
-            .width = @intCast(image.height),
-            .height = @intCast(image.width),
+            .width = @intCast(image.width),
+            .height = @intCast(image.height),
             .data = init: {
                 var data = sg.ImageData{};
                 data.subimage[0][0] = sg.asRange(image.pixels.rgba32);
@@ -75,8 +74,8 @@ pub fn init(self: *@This(), alloc: std.mem.Allocator) RenderableError!void {
         defer image.deinit();
 
         const sg_image = sg.makeImage(.{
-            .width = @intCast(image.height),
-            .height = @intCast(image.width),
+            .width = @intCast(image.width),
+            .height = @intCast(image.height),
             .data = init: {
                 var data = sg.ImageData{};
                 data.subimage[0][0] = sg.asRange(image.pixels.rgba32);
@@ -100,8 +99,8 @@ pub fn init(self: *@This(), alloc: std.mem.Allocator) RenderableError!void {
         defer image.deinit();
 
         const sg_image = sg.makeImage(.{
-            .width = @intCast(image.height),
-            .height = @intCast(image.width),
+            .width = @intCast(image.width),
+            .height = @intCast(image.height),
             .data = init: {
                 var data = sg.ImageData{};
                 data.subimage[0][0] = sg.asRange(image.pixels.rgba32);
@@ -116,7 +115,35 @@ pub fn init(self: *@This(), alloc: std.mem.Allocator) RenderableError!void {
         };
     }
 
-    self.pip = util.makePipeline(shd.cursorShaderDesc(sg.queryBackend()));
+    self.pip = sg.makePipeline(.{
+        .shader = sg.makeShader(shd.cursorShaderDesc(sg.queryBackend())),
+        .layout = init: {
+            var l = sg.VertexLayoutState{};
+            l.attrs[shd.ATTR_cursor_pos].format = .FLOAT2;
+            l.attrs[shd.ATTR_cursor_uv0].format = .FLOAT2;
+            l.attrs[shd.ATTR_cursor_color0].format = .UBYTE4N;
+            break :init l;
+        },
+        .index_type = .UINT16,
+        .depth = .{
+            .compare = .ALWAYS,
+            .write_enabled = false,
+        },
+        .cull_mode = .NONE,
+        .colors = init: {
+            var colors: [4]sg.ColorTargetState = undefined;
+            var color = sg.ColorTargetState{};
+            color.blend = .{
+                .enabled = true,
+                .src_factor_rgb = .SRC_ALPHA,
+                .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
+                .src_factor_alpha = .ONE,
+                .dst_factor_alpha = .ONE_MINUS_SRC_ALPHA,
+            };
+            colors[0] = color;
+            break :init colors;
+        },
+    });
     self.sampler = sg.makeSampler(.{});
 
     self.vertex_buffer = sg.makeBuffer(.{
@@ -141,33 +168,26 @@ pub fn render(self: *const @This()) void {
         }
     };
 
-    const half_w = @as(f32, @floatFromInt(current_img.width)) / 2.0;
-    const half_h = @as(f32, @floatFromInt(current_img.height)) / 2.0;
+    const current_width: f32 = @floatFromInt(sokol.app.width());
+    const current_height: f32 = @floatFromInt(sokol.app.height());
+    const img_height = @as(f32, @floatFromInt(current_img.height));
+    const img_width = @as(f32, @floatFromInt(current_img.width));
+    const nh: f32 = img_height / current_height;
+    const nw: f32 = img_width / current_width;
+
+    const nx: f32 = self.mx / (current_width * 0.5);
+    const ny: f32 = self.my / (current_height * 0.5);
 
     const vertices = [_]Vertex{
         // zig fmt: off
-        .{ .x = self.mx - half_w, .y = self.my - half_h, .color = 0xFFFFFFFF, .u = 0.0, .v = 0.0 },
-        .{ .x = self.mx - half_w, .y = self.my + half_h, .color = 0xFFFFFFFF, .u = 0.0, .v = 1.0 },
-        .{ .x = self.mx + half_w, .y = self.my + half_h, .color = 0xFFFFFFFF, .u = 1.0, .v = 1.0 },
-        .{ .x = self.mx + half_w, .y = self.my - half_h, .color = 0xFFFFFFFF, .u = 1.0, .v = 0.0 },
+        .{ .x = (nx - nw / 2), .y = (ny - nh / 2), .color = 0xFFFFFFFF, .u = 0.0, .v = 1.0 },
+        .{ .x = (nx - nw / 2), .y = (ny + nh / 2), .color = 0xFFFFFFFF, .u = 0.0, .v = 0.0 },
+        .{ .x = (nx + nw / 2), .y = (ny + nh / 2), .color = 0xFFFFFFFF, .u = 1.0, .v = 0.0 },
+        .{ .x = (nx + nw / 2), .y = (ny - nh / 2), .color = 0xFFFFFFFF, .u = 1.0, .v = 1.0 },
         // zig fmt: on
     };
 
     sg.updateBuffer(self.vertex_buffer, sg.asRange(vertices[0..]));
-
-    // Create orthographic projection matrix for screen coordinates (0,0 top-left to width,height bottom-right)
-    const window_width: f32 = @floatFromInt(WINDOW_WIDTH);
-    const window_height: f32 = @floatFromInt(WINDOW_HEIGHT);
-    const ortho_matrix = [16]f32{
-        2.0 / window_width,  0.0,                 0.0, -1.0,
-        0.0,                 -2.0 / window_height, 0.0, 1.0,
-        0.0,                 0.0,                 1.0, 0.0,
-        0.0,                 0.0,                 0.0, 1.0,
-    };
-    
-    const vs_params = shd.VsParams{
-        .mvp = ortho_matrix,
-    };
 
     const bind = sg.Bindings{
         .vertex_buffers = ver: {
@@ -190,7 +210,6 @@ pub fn render(self: *const @This()) void {
 
     sg.applyPipeline(self.pip);
     sg.applyBindings(bind);
-    sg.applyUniforms(shd.UB_vs_params, sg.asRange(&vs_params));
     sg.draw(0, 6, 1);
 }
 
