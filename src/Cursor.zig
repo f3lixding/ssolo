@@ -7,8 +7,6 @@ const assets = @import("assets");
 const zigimg = @import("zigimg");
 const Event = @import("sokol").app.Event;
 const RenderableError = @import("Renderable.zig").RenderableError;
-const WINDOW_HEIGHT = @import("main.zig").WINDOW_HEIGHT;
-const WINDOW_WIDTH = @import("main.zig").WINDOW_WIDTH;
 
 const ButtonState = enum {
     Idle,
@@ -245,8 +243,6 @@ pub fn inputEventHandle(self: *@This(), event: [*c]const Event) RenderableError!
         else => {},
     }
 }
-
-pub fn update(_: *@This(), _: f32) RenderableError!void {}
 
 pub fn deinit(self: *@This()) void {
     sg.destroyImage(self.idle_image.image);

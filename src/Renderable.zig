@@ -19,12 +19,12 @@ alloc: std.mem.Allocator = undefined,
 /// Must have fields
 ptr: *anyopaque,
 initFnPtr: *const fn (ptr: *anyopaque, alloc: std.mem.Allocator) RenderableError!void,
-updateFnPtr: *const fn (ptr: *anyopaque, dt: f32) RenderableError!void,
 renderFnPtr: *const fn (ptr: *const anyopaque) RenderableError!void,
 deinitFnPtr: *const fn (ptr: *anyopaque) void,
 
 /// Optional fields (the interface would assign something to it but it won't try to enforce it on the anyopaque)
 inputEventHandleFnPtr: *const fn (ptr: *anyopaque, event: [*c]const Event) RenderableError!void,
+updateFnPtr: *const fn (ptr: *anyopaque, dt: f32) RenderableError!void,
 
 pub fn init(inner_ptr: anytype) !@This() {
     const T: type = @TypeOf(inner_ptr);
@@ -37,7 +37,11 @@ pub fn init(inner_ptr: anytype) !@This() {
 
         pub fn update(ptr: *anyopaque, dt: f32) RenderableError!void {
             const self: T = @ptrCast(@alignCast(ptr));
-            return self.update(dt);
+            // this has to be a pointer so there is no need for switch casing
+            const actual_type = @typeInfo(T).pointer.child;
+            if (@hasDecl(actual_type, "update")) {
+                return self.update(dt);
+            }
         }
 
         pub fn render(ptr: *const anyopaque) RenderableError!void {

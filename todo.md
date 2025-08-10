@@ -4,6 +4,7 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 ## TODO
 - [ ] Different screens / mode (Menu screen)
 - [ ] Reactive buttons
+- [ ] Add a proper test harness that is capabale of running the tests that has external dependencies
 - [ ] Decouple util functions from alien asset
 - [ ] Add states to alternate screens
 - [ ] Draw order enforcement

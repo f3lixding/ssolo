@@ -32,6 +32,7 @@ const pass_action: sg.PassAction = .{ .colors = [_]sg.ColorAttachmentAction{ .{ 
 var renderables: [100]Renderable = undefined;
 var ren_idx: usize = 0;
 var allocator: std.mem.Allocator = undefined;
+var IS_IN_MENU: bool = false;
 
 export fn init() void {
     sg.setup(.{
