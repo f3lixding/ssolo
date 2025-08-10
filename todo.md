@@ -2,8 +2,8 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
-- [ ] Custom mouse cursor
 - [ ] Different screens / mode (Menu screen)
+- [ ] Reactive buttons
 - [ ] Decouple util functions from alien asset
 - [ ] Add states to alternate screens
 - [ ] Draw order enforcement
@@ -15,6 +15,7 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 - [ ] Pose changes
 
 ## DONE
+- [x] Custom mouse cursor
 - [x] Generic, standalone pushdown automata
 - [x] Experiment with animation event
 - [x] Render attachment type outside of region attachment 

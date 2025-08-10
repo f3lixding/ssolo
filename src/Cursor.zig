@@ -41,7 +41,7 @@ pub fn init(self: *@This(), alloc: std.mem.Allocator) RenderableError!void {
     self.alloc = alloc;
 
     {
-        const image_buffer = assets.cursor_default_png;
+        const image_buffer: []const u8 = assets.cursor_default_png;
         var image = zigimg.Image.fromMemory(alloc, image_buffer) catch {
             std.log.err("Erroring reading image for cursor init", .{});
             return RenderableError.InitError;
@@ -179,15 +179,15 @@ pub fn render(self: *const @This()) void {
 
     const x_invert: f32 = if (self.x_invert) -1.0 else 1.0;
     const y_invert: f32 = if (self.y_invert) -1.0 else 1.0;
-    const nx: f32 = x_invert * self.mx / (current_width * 0.5);
+    const nx: f32 = x_invert * (self.mx / (current_width * 0.5));
     const ny: f32 = y_invert * (self.my / (current_height * 0.5));
 
     const vertices = [_]Vertex{
         // zig fmt: off
-        .{ .x = (nx - nw / 2), .y = (ny - nh / 2), .color = 0xFFFFFFFF, .u = 0.0, .v = 1.0 },
-        .{ .x = (nx - nw / 2), .y = (ny + nh / 2), .color = 0xFFFFFFFF, .u = 0.0, .v = 0.0 },
-        .{ .x = (nx + nw / 2), .y = (ny + nh / 2), .color = 0xFFFFFFFF, .u = 1.0, .v = 0.0 },
-        .{ .x = (nx + nw / 2), .y = (ny - nh / 2), .color = 0xFFFFFFFF, .u = 1.0, .v = 1.0 },
+        .{ .x = nx,      .y = ny,      .color = 0xFFFFFFFF, .u = 0.0, .v = 0.0 }, // top-left
+        .{ .x = nx,      .y = ny - nh, .color = 0xFFFFFFFF, .u = 0.0, .v = 1.0 }, // bottom-left  
+        .{ .x = nx + nw, .y = ny - nh, .color = 0xFFFFFFFF, .u = 1.0, .v = 1.0 }, // bottom-right
+        .{ .x = nx + nw, .y = ny,      .color = 0xFFFFFFFF, .u = 1.0, .v = 0.0 }, // top-right
         // zig fmt: on
     };
 
