@@ -2,10 +2,8 @@ const std = @import("std");
 const sokol = @import("sokol");
 const sg = sokol.gfx;
 const zigimg = @import("zigimg");
-const spine_c = @cImport({
-    @cInclude("spine/spine.h");
-    @cInclude("spine/extension.h");
-});
+const util = @import("util.zig");
+const spine_c = util.spine_c;
 
 export fn _spUtil_readFile(path: [*c]const u8, length: [*c]c_int) [*c]u8 {
     return spine_c._spReadFile(path, length);

@@ -7,10 +7,7 @@ const slog = sokol.log;
 const sglue = sokol.glue;
 const Allocator = std.mem.Allocator;
 const util = @import("util.zig");
-const spine_c = @cImport({
-    @cInclude("spine/spine.h");
-    @cInclude("spine/extension.h");
-});
+const spinec_c = util.spine_c;
 
 const Renderable = @import("Renderable.zig");
 const Aliens = @import("objects/Aliens.zig");
