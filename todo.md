@@ -3,10 +3,13 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 
 ## TODO
 - [ ] Different screens / mode (Menu screen)
+- [ ] Share states between cursor and menu screen (or any other components since cursor position is probably going to be used by everything)
+- [ ] Render text on menu screens 
 - [ ] Reactive buttons
 - [ ] Add a proper test harness that is capabale of running the tests that has external dependencies
 - [ ] Decouple util functions from alien asset
 - [ ] Add states to alternate screens
+- [ ] Optimize Renderable interface so that so fail fast does not have to be done south of the VTable
 - [ ] Draw order enforcement
 - [ ] Background rendering
 - [ ] Handling of in game events for different objects (or the interface of it)

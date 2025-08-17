@@ -5,17 +5,19 @@ const Allocator = std.mem.Allocator;
 const Event = @import("sokol").app.Event;
 const assert = std.debug.assert;
 
-/// A [Widget] is a way to represent a blob of content to display.
-/// It implements [Renderable].
-/// A [Widget] can contain other widgets. They are composed via comptime logic.
-/// A [Widget] that has different number of children are seen as different types.
-pub fn Widget(comptime config: struct {
+pub const WidgetConfig = struct {
     /// The parent type where the logic concerning to this widget is held
     /// The core type is stateful and is responsible of keeping states of interest
     CoreType: type,
     /// The children widgets this widget owns
     widgets: []const type = &.{},
-}) type {
+};
+
+/// A [Widget] is a way to represent a blob of content to display.
+/// It implements [Renderable].
+/// A [Widget] can contain other widgets. They are composed via comptime logic.
+/// A [Widget] that has different number of children are seen as different types.
+pub fn Widget(comptime config: WidgetConfig) type {
     return struct {
         const CoreType = config.CoreType;
         const Self = @This();
@@ -123,7 +125,7 @@ pub fn Widget(comptime config: struct {
             }
 
             if (@hasDecl(CoreType, "deinit")) {
-                try self.core.deinit();
+                self.core.deinit();
             }
         }
         // -- impl Renderable end --

@@ -12,6 +12,8 @@ const spinec_c = util.spine_c;
 const Renderable = @import("Renderable.zig");
 const Aliens = @import("objects/Aliens.zig");
 const Cursor = @import("Cursor.zig");
+const SettingsMenu = @import("menus/SettingsMenu.zig");
+const Widget = @import("menus/widget.zig").Widget;
 
 const pda = @import("pda");
 
@@ -53,6 +55,24 @@ export fn init() void {
     };
     aliens.* = Aliens{};
     renderables[ren_idx] = Renderable.init(aliens) catch |e| {
+        std.log.err("Error erasing type {any}", .{e});
+        unreachable;
+    };
+    ren_idx += 1;
+
+    // menu
+    const WrappedMenu = Widget(.{
+        .CoreType = SettingsMenu,
+    });
+    const wrapped_menu = allocator.create(WrappedMenu) catch |e| {
+        std.log.err("Error creating menu {any}", .{e});
+        unreachable;
+    };
+    wrapped_menu.* = WrappedMenu{
+        .alloc = allocator,
+        .core = SettingsMenu{},
+    };
+    renderables[ren_idx] = Renderable.init(wrapped_menu) catch |e| {
         std.log.err("Error erasing type {any}", .{e});
         unreachable;
     };
