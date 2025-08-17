@@ -31,6 +31,10 @@ pub fn Pda(comptime StateType: type, comptime SymbolType: type) type {
             };
         }
 
+        pub fn peakCurrentState(self: Self) StateType {
+            return self.current_state;
+        }
+
         pub fn deinit(self: Self) void {
             self.stack.deinit();
         }

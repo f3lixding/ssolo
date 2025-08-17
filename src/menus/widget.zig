@@ -24,8 +24,8 @@ pub fn Widget(comptime config: struct {
         core: CoreType,
         widgets: ?WidgetTuple(config.widgets) = null,
         top_left_coord: [2]f32 = .{ 0.0, 0.0 },
-        width: i32 = 10,
         height: i32 = 10,
+        width: i32 = 10,
 
         // -- impl Renderable start --
         pub fn init(self: *Self, alloc: Allocator) !void {
@@ -52,7 +52,7 @@ pub fn Widget(comptime config: struct {
             }
 
             if (@hasDecl(CoreType, "init")) {
-                try self.core.init(alloc);
+                try self.core.init(alloc, self.top_left_coord, self.height, self.width);
             }
         }
 
@@ -77,7 +77,7 @@ pub fn Widget(comptime config: struct {
             }
 
             if (@hasDecl(CoreType, "render")) {
-                try self.core.render(self.top_left_coord, self.width, self.height);
+                try self.core.render();
             }
         }
 
@@ -159,19 +159,24 @@ fn WidgetTuple(comptime widget_types: []const type) type {
 test "init" {
     // typedef
     const MainCore = struct {
-        pub fn init(self: *@This(), alloc: std.mem.Allocator) !void {
+        pub fn init(
+            self: *@This(),
+            alloc: std.mem.Allocator,
+            top_left_coord: [2]f32,
+            height: i32,
+            width: i32,
+        ) !void {
             _ = self;
             _ = alloc;
+            _ = top_left_coord;
+            _ = height;
+            _ = width;
             std.debug.print("main widget init called\n", .{});
         }
 
-        pub fn render(self: *const @This(), top_left_coord: [2]f32, height: i32, width: i32) !void {
+        pub fn render(self: *const @This()) !void {
             _ = self;
-            std.debug.print("main core render called with top_left_coord: {any}, height: {d}, width: {d}\n", .{
-                top_left_coord,
-                height,
-                width,
-            });
+            std.debug.print("main core render called\n", .{});
         }
     };
     const MainWidget = Widget(.{
@@ -186,19 +191,24 @@ test "init" {
 
     // trying out with main core directly as a subtype (as opposed to wrapped in a widget)
     const BigCore = struct {
-        pub fn init(self: *@This(), alloc: std.mem.Allocator) !void {
+        pub fn init(
+            self: *@This(),
+            alloc: std.mem.Allocator,
+            top_left_coord: [2]f32,
+            height: i32,
+            width: i32,
+        ) !void {
             _ = self;
             _ = alloc;
+            _ = top_left_coord;
+            _ = height;
+            _ = width;
             std.debug.print("big widget init called\n", .{});
         }
 
-        pub fn render(self: *const @This(), top_left_coord: [2]f32, height: i32, width: i32) !void {
+        pub fn render(self: *const @This()) !void {
             _ = self;
-            std.debug.print("main core render called with top_left_coord: {any}, height: {d}, width: {d}\n", .{
-                top_left_coord,
-                height,
-                width,
-            });
+            std.debug.print("big core render called\n", .{});
         }
     };
 
