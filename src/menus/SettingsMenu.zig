@@ -93,10 +93,13 @@ pub fn init(self: *Self, alloc: Allocator, top_left_coord: [2]f32, height: i32, 
     self.index_buffer = sg.makeBuffer(.{
         .usage = .{ .index_buffer = true },
         .data = sg.asRange(&[_]u16{
+            // First rectangle
             0,  1,  2,  0,  2,  3,
             4,  5,  6,  4,  6,  7,
+            // Second rectangle
             8,  9,  10, 8,  10, 11,
             12, 13, 14, 12, 14, 15,
+            // Third rectangle
             16, 17, 18, 16, 18, 19,
             20, 21, 22, 20, 22, 23,
         }),
@@ -114,10 +117,12 @@ pub fn render(self: *const Self) !void {
     var vertices: [24]Vertex = undefined;
 
     const bg_vertices = [_]Vertex{
-        .{ .x = -1.0, .y = 1.0, .color = 0xB3000000, .u = 0.0, .v = 0.0 },
+        // zig fmt: off
+        .{ .x = -1.0, .y =  1.0, .color = 0xB3000000, .u = 0.0, .v = 0.0 },
         .{ .x = -1.0, .y = -1.0, .color = 0xB3000000, .u = 0.0, .v = 1.0 },
-        .{ .x = 1.0, .y = -1.0, .color = 0xB3000000, .u = 1.0, .v = 1.0 },
-        .{ .x = 1.0, .y = 1.0, .color = 0xB3000000, .u = 1.0, .v = 0.0 },
+        .{ .x =  1.0, .y = -1.0, .color = 0xB3000000, .u = 1.0, .v = 1.0 },
+        .{ .x =  1.0, .y =  1.0, .color = 0xB3000000, .u = 1.0, .v = 0.0 },
+        // zig fmt: on
     };
 
     for (0..4) |i| {
@@ -129,10 +134,12 @@ pub fn render(self: *const Self) !void {
     const title_y = 0.6;
 
     const title_vertices = [_]Vertex{
+        // zig fmt: off
         .{ .x = -title_width, .y = title_y + title_height, .color = 0xFFFFFFFF, .u = 0.0, .v = 0.0 },
-        .{ .x = -title_width, .y = title_y, .color = 0xFFFFFFFF, .u = 0.0, .v = 1.0 },
-        .{ .x = title_width, .y = title_y, .color = 0xFFFFFFFF, .u = 1.0, .v = 1.0 },
-        .{ .x = title_width, .y = title_y + title_height, .color = 0xFFFFFFFF, .u = 1.0, .v = 0.0 },
+        .{ .x = -title_width, .y = title_y,                .color = 0xFFFFFFFF, .u = 0.0, .v = 1.0 },
+        .{ .x =  title_width, .y = title_y,                .color = 0xFFFFFFFF, .u = 1.0, .v = 1.0 },
+        .{ .x =  title_width, .y = title_y + title_height, .color = 0xFFFFFFFF, .u = 1.0, .v = 0.0 },
+        // zig fmt: on
     };
 
     for (0..4) |i| {
@@ -151,10 +158,12 @@ pub fn render(self: *const Self) !void {
     for (buttons, 0..) |button, i| {
         const base_idx = 8 + i * 4;
         const button_vertices = [_]Vertex{
+            // zig fmt: off
             .{ .x = -button_width, .y = button.y_offset + button_height, .color = 0xFF444444, .u = 0.0, .v = 0.0 },
-            .{ .x = -button_width, .y = button.y_offset, .color = 0xFF444444, .u = 0.0, .v = 1.0 },
-            .{ .x = button_width, .y = button.y_offset, .color = 0xFF444444, .u = 1.0, .v = 1.0 },
-            .{ .x = button_width, .y = button.y_offset + button_height, .color = 0xFF444444, .u = 1.0, .v = 0.0 },
+            .{ .x = -button_width, .y = button.y_offset,                 .color = 0xFF444444, .u = 0.0, .v = 1.0 },
+            .{ .x =  button_width, .y = button.y_offset,                 .color = 0xFF444444, .u = 1.0, .v = 1.0 },
+            .{ .x =  button_width, .y = button.y_offset + button_height, .color = 0xFF444444, .u = 1.0, .v = 0.0 },
+            // zig fmt: on
         };
 
         for (0..4) |j| {
@@ -198,8 +207,10 @@ pub fn inputEventHandle(self: *Self, event: [*c]const Event) !void {
     }
 }
 
+// There are the following events of concerns we need to derive:
+// - If an escape key is hit
+// - If the mouse up event has occurred (only when the menu is being shown)
 fn getSymbolFromEvent(self: Self, event: [*c]const Event) ?SymbolType {
-    _ = self;
     if (event.*.type == .KEY_UP) {
         switch (event.*.key_code) {
             .ESCAPE => return .Esc,
@@ -207,7 +218,7 @@ fn getSymbolFromEvent(self: Self, event: [*c]const Event) ?SymbolType {
         }
     }
 
-    if (event.*.type == .MOUSE_UP) {}
+    if (self.pda.peakCurrentState() != .Hidden and event.*.type == .MOUSE_UP) {}
 
     return null;
 }

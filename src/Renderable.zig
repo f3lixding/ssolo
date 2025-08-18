@@ -35,6 +35,8 @@ pub fn init(inner_ptr: anytype) !@This() {
             return self.init(alloc);
         }
 
+        /// This refers to the updates necessary for rendering
+        /// e.g. attachment repositioning
         pub fn update(ptr: *anyopaque, dt: f32) RenderableError!void {
             const self: T = @ptrCast(@alignCast(ptr));
             // this has to be a pointer so there is no need for switch casing
@@ -54,6 +56,10 @@ pub fn init(inner_ptr: anytype) !@This() {
             self.deinit();
         }
 
+        // Maybe this should not be a part of this interface.
+        // This has very little to do with rendering and more importantly it does not lend it self well with updates associated with interactivity
+        // More importantly, we have structured the pipeline to be calling each interface method separately, which necessitates going up and down
+        // the interface boundary repeatedly. That is to say that there is no performance loss even if we are to have a different interface for this.
         pub fn inputEventHandle(ptr: *anyopaque, event: [*c]const Event) RenderableError!void {
             const self: T = @ptrCast(@alignCast(ptr));
             // this has to be a pointer so there is no need for switch casing
