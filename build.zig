@@ -42,7 +42,7 @@ pub fn build(b: *std.Build) void {
 
     const test_filter = b.option([]const u8, "filter", "filter for a test");
     const build_unit_tests = b.addTest(.{
-        .root_source_file = b.path("tests/unit_tests_main.zig"),
+        .root_source_file = b.path("test_main.zig"),
         .target = target,
         .optimize = std.builtin.OptimizeMode.Debug,
         .filters = if (test_filter) |filter| &.{filter} else &.{},
@@ -51,6 +51,7 @@ pub fn build(b: *std.Build) void {
     build_unit_tests.linkLibrary(spine_c_lib.artifact("spine-c"));
     build_unit_tests.addIncludePath(spine_c_lib.path("include"));
     build_unit_tests.root_module.addImport("zigimg", zigimg_dep.module("zigimg"));
+    build_unit_tests.root_module.addImport("sokol", sokol_dep.module("sokol"));
 
     const util_test_step = b.step("test", "Run util unit test");
     const run_util_test = b.addRunArtifact(build_unit_tests);

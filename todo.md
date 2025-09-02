@@ -2,6 +2,7 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
+- [ ] Rewrite in ECS(?). Right now the interfaces isn't all that typical of a game engine. 
 - [ ] Render text on menu screens 
 - [ ] Add a proper test harness that is capabale of running the tests that has external dependencies (reference zigimg for this)
 - [ ] Different screens / mode (Menu screen)
@@ -9,7 +10,6 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 - [ ] Reactive buttons
 - [ ] Decouple util functions from alien asset
 - [ ] Add states to alternate screens
-- [ ] Rewrite in ECS(?). Right now the interfaces isn't all that typical of a game engine. 
 - [ ] Add a function for state updates that are depended on neighboring entities (i.e. collision detection)
 - [ ] Optimize Renderable interface so that so fail fast does not have to be done south of the VTable
 - [ ] Draw order enforcement

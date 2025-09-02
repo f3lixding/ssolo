@@ -3,6 +3,6 @@ test {
     std.testing.refAllDecls(@This());
 
     inline for (.{
-        @import("component_test.zig"),
+        @import("tests/component_test.zig"),
     }) |source_file| std.testing.refAllDeclsRecursive(source_file);
 }
