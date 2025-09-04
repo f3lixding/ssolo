@@ -3,6 +3,7 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 
 ## TODO
 - [ ] Rewrite in ECS(?). Right now the interfaces isn't all that typical of a game engine. 
+- [ ] Upgrade to 0.15 (this is pending zigimg)
 - [ ] Render text on menu screens 
 - [ ] Add a proper test harness that is capabale of running the tests that has external dependencies (reference zigimg for this)
 - [ ] Different screens / mode (Menu screen)

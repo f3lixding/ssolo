@@ -21,3 +21,10 @@ pub const Renderable = struct {
     total_vertex_count: usize,
     world_vertices_pos: [MAX_VERTICES_PER_ATTACHMENT]f32,
 };
+
+pub fn ComponentId(comptime ComponentType: type) u32 {
+    const std = @import("std");
+    const type_name = @typeName(ComponentType);
+
+    return @truncate(std.hash_map.hashString(type_name));
+}

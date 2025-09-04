@@ -40,6 +40,9 @@
 //! that was moved, if any.
 
 pub const System = @import("system.zig").System;
+pub const Archetype = @import("entity.zig").Archetype;
+pub const ArchetypeSignature = @import("entity.zig").ArchetypeSignature;
+pub const Entity = @import("entity.zig").Entity;
 
 const sg = @import("sokol").gfx;
 
