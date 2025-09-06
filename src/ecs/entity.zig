@@ -6,7 +6,7 @@ const ComponentId = @import("components.zig").ComponentId;
 pub const Entity = u32;
 pub const ComponentsMap = std.HashMap(u32, std.ArrayList(u8), std.hash_map.AutoContext(Entity), 80);
 
-pub const EntityError = error{} || std.mem.Allocator.Error;
+pub const EntityError = error{IncompatibleArchetype} || std.mem.Allocator.Error;
 
 pub const Archetype = struct {
     const Self = @This();
@@ -31,6 +31,7 @@ pub const Archetype = struct {
                 const id = ComponentId(@"type");
                 component_ids[i] = id;
             }
+            std.mem.sort(u32, component_ids, {}, std.sort.asc(u32));
 
             break :sig ArchetypeSignature{ .component_ids = component_ids };
         };
@@ -54,14 +55,25 @@ pub const Archetype = struct {
         self.signature.deinit(self.alloc);
     }
 
-    pub fn addEntity(self: *Self, entity_id: Entity, comptime components: anytype) EntityError!void {
+    pub fn addEntity(self: *Self, entity_id: Entity, components: anytype) EntityError!void {
         // To add an entity, we need to perform the following:
         // 1. destructure each field in the components tuple struct and add the value to their respective storage (in the components_map)
         // 2. insert the entity in its place in entites array
         // 3. increment entity index
         const type_info = @typeInfo(@TypeOf(components));
-        comptime {
-            if (type_info != .@"struct") @compileError("components must be a struct");
+        if (type_info != .@"struct") @compileError("components must be a struct");
+        const fields = type_info.@"struct".fields;
+        var component_ids: [fields.len]u32 = undefined;
+
+        inline for (fields, 0..) |field, i| {
+            const @"type" = @TypeOf(@field(components, field.name));
+            const id = ComponentId(@"type");
+            component_ids[i] = id;
+        }
+        std.mem.sort(u32, &component_ids, {}, std.sort.asc(u32));
+
+        if (!self.signature.matches(&component_ids)) {
+            return EntityError.IncompatibleArchetype;
         }
 
         inline for (type_info.@"struct".fields) |field| {

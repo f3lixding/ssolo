@@ -29,7 +29,9 @@ test "Archetype init and add" {
     const alloc = std.testing.allocator;
     var entity_id: Entity = 0;
 
-    var archetype = Archetype.init(alloc);
+    var archetype = Archetype.init(alloc, .{ TestComponentOne, TestComponentTwo });
+    defer archetype.deinit();
+
     const test_comp_one = TestComponentOne{
         .field_one = 1,
         .field_two = 2,
@@ -40,10 +42,29 @@ test "Archetype init and add" {
     };
 
     // Adding here to try to catch memory leak
-    try archetype.addEntity(entity_id, .{ test_comp_one, test_comp_two });
+    var res = archetype.addEntity(entity_id, .{ test_comp_one, test_comp_two });
     entity_id += 1;
+    var is_err = if (res) |_| false else |_| true;
+    std.debug.assert(!is_err);
 
-    archetype.deinit();
+    // Since we sort the component ids before we register them, changing the order should not
+    // result in a mismatch
+    res = archetype.addEntity(entity_id, .{ test_comp_two, test_comp_one });
+    entity_id += 1;
+    is_err = if (res) |_| false else |_| true;
+    std.debug.assert(!is_err);
+
+    // But a total differing in struct should error
+    res = archetype.addEntity(entity_id, .{test_comp_two});
+    std.debug.assert(res == error.IncompatibleArchetype);
+
+    // It should error out if the struct has different fields
+    const test_comp_three = TestComponentThree{
+        .field_one = 1,
+        .field_two = 2,
+    };
+    res = archetype.addEntity(entity_id, .{ test_comp_one, test_comp_three });
+    std.debug.assert(res == error.IncompatibleArchetype);
 }
 
 test "Archetype get columns" {
@@ -92,6 +113,14 @@ test "Archetype get columns" {
         for (components) |component| {
             std.debug.assert(component.field_one == 1);
             std.debug.assert(component.field_two == 2);
+        }
+    }
+
+    const component_twos = archetype_one.getColumn(TestComponentTwo);
+    if (component_twos) |components| {
+        for (components) |component| {
+            std.debug.assert(component.field_one == 3);
+            std.debug.assert(component.field_two == 4);
         }
     }
 }
