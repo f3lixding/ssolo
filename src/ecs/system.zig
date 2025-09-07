@@ -2,6 +2,7 @@ const std = @import("std");
 const sg = @import("sokol").gfx;
 
 const RenderContext = @import("root.zig").RenderContext;
+const Archetype = @import("entity.zig").Archetype;
 
 pub const SystemError = error{
     InitError,
@@ -10,6 +11,7 @@ pub const SystemError = error{
 /// System in a an ECS is a database that keeps track of entities and caches them by archetypes
 /// It also fulfills queries by said archetypes
 pub fn System(
+    comptime max_archetypes: usize,
     comptime max_entities: usize,
     comptime render_ctxs: []const RenderContext,
 ) type {
@@ -22,6 +24,7 @@ pub fn System(
         samplers: [render_ctxs.len]sg.Sampler = undefined,
 
         // Data associated with ECS management
+        archetypes: [max_archetypes]Archetype = undefined,
         entities: [max_entities]u32 = @splat(0),
         next_entity_id: u32 = 0,
 
@@ -39,6 +42,14 @@ pub fn System(
             return current_id;
         }
 
+        /// Add a component to a particular entity.
+        /// With the current system, this means the following:
+        /// - Query the entity
+        /// - Take the entity and get all of the columns
+        /// - Create a tuple struct for components
+        /// - Look through all the archetypes and find a match. If there wasn't one
+        ///   create it. We can't dynamically construct types in runtime, so we
+        ///   would have to pregenerate all of them during comptime
         pub fn addComponent(
             self: *Self,
             comptime ComponentType: type,

@@ -5,8 +5,13 @@ const ComponentId = @import("components.zig").ComponentId;
 
 pub const Entity = u32;
 pub const ComponentsMap = std.HashMap(u32, std.ArrayList(u8), std.hash_map.AutoContext(Entity), 80);
+pub const ComponentSizeMap = std.HashMap(u32, usize, std.hash_map.AutoContext(u32), 80);
 
-pub const EntityError = error{IncompatibleArchetype} || std.mem.Allocator.Error;
+pub const EntityError = error{
+    IncompatibleArchetype,
+    EntityNotFound,
+    ClobberedComponentId,
+} || std.mem.Allocator.Error;
 
 pub const Archetype = struct {
     const Self = @This();
@@ -16,19 +21,43 @@ pub const Archetype = struct {
     components_map: ComponentsMap,
     entities: std.ArrayList(Entity),
     entities_idx: usize = 0,
+    component_sizes: ComponentSizeMap,
 
-    pub fn init(alloc: std.mem.Allocator, comptime components: anytype) Self {
+    pub fn initWithComponentIds(alloc: std.mem.Allocator, component_ids: []const u32) EntityError!Self {
+        const sorted_ids = try alloc.dupe(u32, component_ids);
+        std.mem.sort(u32, sorted_ids, {}, std.sort.asc(u32));
+
+        const signature = ArchetypeSignature{ .component_ids = sorted_ids };
+
+        return .{
+            .alloc = alloc,
+            .components_map = ComponentsMap.init(alloc),
+            .entities = std.ArrayList(Entity).init(alloc),
+            .signature = signature,
+            .component_sizes = ComponentSizeMap.init(alloc),
+        };
+    }
+
+    pub fn init(alloc: std.mem.Allocator, components: anytype) EntityError!Self {
         const components_info = @typeInfo(@TypeOf(components));
         assert(components_info == .@"struct");
+        var component_sizes = ComponentSizeMap.init(alloc);
+
         const signature = sig: {
             const fields = components_info.@"struct".fields;
-            // Even though we stipulate that components have to be comptime known, it is not
-            // guaranteed that the compiler would allocate a completely different stack for
-            // different inputs of components. Therefore we need to allocate on the heap
-            const component_ids = alloc.alloc(u32, fields.len) catch unreachable;
+            const component_ids = try alloc.alloc(u32, fields.len);
             inline for (fields, 0..) |field, i| {
                 const @"type" = @field(components, field.name);
                 const id = ComponentId(@"type");
+                // store the component size:
+                const gp_res = try component_sizes.getOrPut(id);
+                if (gp_res.found_existing) {
+                    return error.ClobberedComponentId;
+                } else {
+                    const val_ptr = gp_res.value_ptr;
+                    val_ptr.* = @sizeOf(@"type");
+                }
+
                 component_ids[i] = id;
             }
             std.mem.sort(u32, component_ids, {}, std.sort.asc(u32));
@@ -41,6 +70,7 @@ pub const Archetype = struct {
             .components_map = ComponentsMap.init(alloc),
             .entities = std.ArrayList(Entity).init(alloc),
             .signature = signature,
+            .component_sizes = component_sizes,
         };
     }
 
@@ -53,6 +83,7 @@ pub const Archetype = struct {
         self.components_map.deinit();
         self.entities.deinit();
         self.signature.deinit(self.alloc);
+        self.component_sizes.deinit();
     }
 
     pub fn addEntity(self: *Self, entity_id: Entity, components: anytype) EntityError!void {
@@ -88,8 +119,42 @@ pub const Archetype = struct {
     }
 
     pub fn removeEntity(self: *Self, to_remove: Entity) EntityError!void {
-        _ = self;
-        _ = to_remove;
+        const idx_res = for (self.entities.items, 0..) |id, i| {
+            if (id == to_remove) break @as(u32, @intCast(i));
+        } else EntityError.EntityNotFound;
+        const idx: u32 = try idx_res;
+
+        // First, cycle through the component map to remove the associated component
+        var cm_iter = self.components_map.iterator();
+        while (cm_iter.next()) |entry| {
+            const component_id = entry.key_ptr.*;
+            const components = entry.value_ptr;
+
+            // Get the size of this component type
+            const component_size = self.component_sizes.get(component_id) orelse continue;
+
+            // Calculate byte positions for the element to remove and the last element
+            const element_to_remove_start = idx * component_size;
+            const last_element_idx = self.entities_idx - 1;
+            const last_element_start = last_element_idx * component_size;
+
+            // Only swap if we're not removing the last element
+            if (idx != last_element_idx) {
+                // Copy the last element to the position of the element being removed
+                const src_slice = components.items[last_element_start .. last_element_start + component_size];
+                const dst_slice = components.items[element_to_remove_start .. element_to_remove_start + component_size];
+                @memcpy(dst_slice, src_slice);
+            }
+
+            // Remove the last element (shrink the array)
+            components.shrinkRetainingCapacity(components.items.len - component_size);
+        }
+
+        // Second, we need to remove the entity from the list of entities using swap remove
+        _ = self.entities.swapRemove(idx);
+
+        // Finally, we decrement the entity_idx
+        self.entities_idx -= 1;
     }
 
     pub fn getColumn(self: Self, comptime T: type) ?[]T {
@@ -98,11 +163,6 @@ pub const Archetype = struct {
         const with_alignment_one = std.mem.bytesAsSlice(T, components_in_bytes.items);
 
         return @alignCast(with_alignment_one);
-    }
-
-    pub fn addComponentToEntity(self: *Self, comptime T: type, value: T) EntityError!void {
-        _ = self;
-        _ = value;
     }
 };
 

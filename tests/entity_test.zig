@@ -25,11 +25,47 @@ const TestComponentFour = struct {
     field_two: u32,
 };
 
-test "Archetype init and add" {
+test "archetype init with component ids and add" {
     const alloc = std.testing.allocator;
     var entity_id: Entity = 0;
 
-    var archetype = Archetype.init(alloc, .{ TestComponentOne, TestComponentTwo });
+    const components = .{ TestComponentOne, TestComponentTwo };
+    const component_ids = sig: {
+        const components_info = @typeInfo(@TypeOf(components));
+        const fields = components_info.@"struct".fields;
+        const component_ids = try alloc.alloc(u32, fields.len);
+        inline for (fields, 0..) |field, i| {
+            const @"type" = @field(components, field.name);
+            const id = ComponentId(@"type");
+            component_ids[i] = id;
+        }
+        std.mem.sort(u32, component_ids, {}, std.sort.asc(u32));
+        break :sig component_ids;
+    };
+    defer alloc.free(component_ids);
+
+    var archetype = Archetype.initWithComponentIds(alloc, component_ids) catch unreachable;
+    defer archetype.deinit();
+
+    const test_comp_one = TestComponentOne{
+        .field_one = 1,
+        .field_two = 2,
+    };
+    const test_comp_two = TestComponentTwo{
+        .field_one = 3,
+        .field_two = 4,
+    };
+    const res = archetype.addEntity(entity_id, .{ test_comp_one, test_comp_two });
+    entity_id += 1;
+    const is_err = if (res) |_| false else |_| true;
+    std.debug.assert(!is_err);
+}
+
+test "archetype init and add" {
+    const alloc = std.testing.allocator;
+    var entity_id: Entity = 0;
+
+    var archetype = Archetype.init(alloc, .{ TestComponentOne, TestComponentTwo }) catch unreachable;
     defer archetype.deinit();
 
     const test_comp_one = TestComponentOne{
@@ -67,7 +103,41 @@ test "Archetype init and add" {
     std.debug.assert(res == error.IncompatibleArchetype);
 }
 
-test "Archetype get columns" {
+test "archetype remove entity" {
+    const alloc = std.testing.allocator;
+    var entity_id: Entity = 0;
+
+    var archetype = Archetype.init(alloc, .{ TestComponentOne, TestComponentTwo }) catch unreachable;
+    defer archetype.deinit();
+
+    const test_comp_one = TestComponentOne{
+        .field_one = 1,
+        .field_two = 2,
+    };
+    const test_comp_two = TestComponentTwo{
+        .field_one = 3,
+        .field_two = 4,
+    };
+
+    try archetype.addEntity(entity_id, .{ test_comp_one, test_comp_two });
+    entity_id += 1;
+    try archetype.addEntity(entity_id, .{ test_comp_one, test_comp_two });
+    entity_id += 1;
+
+    const to_remove = entity_id - 1;
+    const res = archetype.removeEntity(to_remove);
+    std.debug.assert(res != error.EntityNotFound);
+    std.debug.assert(archetype.entities_idx == 1);
+    var iter = archetype.components_map.iterator();
+    while (iter.next()) |entry| {
+        const type_size = archetype.component_sizes.get(entry.key_ptr.*) orelse unreachable;
+        const val = entry.value_ptr;
+        std.debug.assert(val.items.len == type_size * 1);
+    }
+    std.debug.assert(archetype.entities.items.len == 1);
+}
+
+test "archetype get columns" {
     const alloc = std.testing.allocator;
     var entity_id: Entity = 0;
 
@@ -88,10 +158,10 @@ test "Archetype get columns" {
         .field_two = 4,
     };
 
-    var archetype_one = Archetype.init(alloc, .{ TestComponentOne, TestComponentTwo });
+    var archetype_one = Archetype.init(alloc, .{ TestComponentOne, TestComponentTwo }) catch unreachable;
     defer archetype_one.deinit();
 
-    var archetype_two = Archetype.init(alloc, .{ TestComponentThree, TestComponentFour });
+    var archetype_two = Archetype.init(alloc, .{ TestComponentThree, TestComponentFour }) catch unreachable;
     defer archetype_two.deinit();
 
     try archetype_one.addEntity(entity_id, .{ test_comp_one, test_comp_two });
@@ -102,9 +172,11 @@ test "Archetype get columns" {
     var component_ids_one: [2]u32 = undefined;
     component_ids_one[0] = ComponentId(TestComponentOne);
     component_ids_one[1] = ComponentId(TestComponentTwo);
+    std.mem.sort(u32, &component_ids_one, {}, std.sort.asc(u32));
     var component_ids_two: [2]u32 = undefined;
     component_ids_two[0] = ComponentId(TestComponentThree);
     component_ids_two[1] = ComponentId(TestComponentFour);
+    std.mem.sort(u32, &component_ids_two, {}, std.sort.asc(u32));
     std.debug.assert(archetype_one.signature.matches(&component_ids_one));
     std.debug.assert(archetype_two.signature.matches(&component_ids_two));
 

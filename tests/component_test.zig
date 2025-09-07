@@ -1,14 +1,11 @@
 const zigimg = @import("zigimg");
 const std = @import("std");
+const ecs = @import("../src/ecs/root.zig");
+const AllComponentCombinations = ecs.AllComponentCombinations;
 
-test "component test" {
-    const bgr = zigimg.PixelFormat.bgr24;
-    std.debug.print("component test ran\n", .{});
-    std.debug.print("bgr: {any}\n", .{bgr});
-}
-
-test "regex test" {
-    const bgr = zigimg.PixelFormat.bgr24;
-    std.debug.print("regex test ran\n", .{});
-    std.debug.print("bgr: {any}\n", .{bgr});
+test "pregenerate component combination tuples" {
+    const combo = AllComponentCombinations[10];
+    inline for (combo) |component| {
+        @compileLog(@typeName(component));
+    }
 }
