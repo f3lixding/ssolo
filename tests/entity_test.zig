@@ -125,8 +125,19 @@ test "archetype remove entity" {
     entity_id += 1;
 
     const to_remove = entity_id - 1;
-    const res = archetype.removeEntity(to_remove);
+    var res = archetype.removeEntity(to_remove);
+    defer if (res) |*bundle| {
+        bundle.deinit();
+    } else |_| {};
+
     std.debug.assert(res != error.EntityNotFound);
+
+    var unwrapped_res = res catch unreachable;
+    const component_one_id = ComponentId(TestComponentOne);
+    const component_one_array = unwrapped_res.components.get(component_one_id) orelse unreachable;
+    const test_component_one = std.mem.bytesToValue(TestComponentOne, component_one_array.items[0..@sizeOf(TestComponentOne)]);
+    std.debug.print("test_component_one: {any}\n", .{test_component_one});
+
     std.debug.assert(archetype.entities_idx == 1);
     var iter = archetype.components_map.iterator();
     while (iter.next()) |entry| {

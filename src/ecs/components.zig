@@ -6,37 +6,6 @@ const Vertex = util.Vertex;
 
 const MAX_VERTICES_PER_ATTACHMENT = util.MAX_VERTICES_PER_ATTACHMENT;
 
-const MainUnionForAllComponents = .{
-    Position,
-    Health,
-    WalkingVelocity,
-    FlyingVelocity,
-    AttackDamage,
-    RateOfAttack,
-    Renderable,
-};
-
-pub const AllComponentCombinations = blk: {
-    const components = MainUnionForAllComponents;
-    const component_count = components.len;
-    // const total_combinations = @as(usize, 1) << @intCast(component_count);
-    const total_combinations = 20;
-
-    var combinations: [total_combinations][]const type = undefined;
-
-    for (0..total_combinations) |i| {
-        var combo: []const type = &.{};
-        for (0..component_count) |j| {
-            if ((i >> @intCast(j)) & 1 == 1) {
-                combo = combo ++ &[_]type{components[j]};
-            }
-        }
-        combinations[i] = combo;
-    }
-
-    break :blk combinations;
-};
-
 pub const Position = struct { x: f32, y: f32 };
 pub const Health = struct { value: u32 };
 pub const WalkingVelocity = struct { value: f32 };

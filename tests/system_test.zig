@@ -1,8 +1,8 @@
-test "system init" {
-    const ecs = @import("../src/ecs/root.zig");
-    const sg = @import("sokol").gfx;
-    const std = @import("std");
+const ecs = @import("../src/ecs/root.zig");
+const sg = @import("sokol").gfx;
+const std = @import("std");
 
+test "system init" {
     var system = ecs.System(10, &[_]ecs.RenderContext{
         .{
             .get_pip_fn_ptr = struct {
@@ -21,6 +21,25 @@ test "system init" {
     system.init(std.testing.allocator) catch |e| {
         std.debug.panic("Init errored: {any}\n", .{e});
     };
+}
+
+test " system add component" {
+    var system = ecs.System(10, &[_]ecs.RenderContext{
+        .{
+            .get_pip_fn_ptr = struct {
+                pub fn get_pip() sg.Pipeline {
+                    return sg.Pipeline{};
+                }
+            }.get_pip,
+            .get_sampler_fn_ptr = struct {
+                pub fn get_sampler() sg.Sampler {
+                    return sg.Sampler{};
+                }
+            }.get_sampler,
+        },
+    }){};
+
+    system.addComponent()
 }
 
 test "system create entity" {}

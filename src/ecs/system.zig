@@ -1,18 +1,26 @@
 const std = @import("std");
 const sg = @import("sokol").gfx;
+const Entity = @import("entity.zig").Entity;
 
 const RenderContext = @import("root.zig").RenderContext;
 const Archetype = @import("entity.zig").Archetype;
+const ArchetypeSignature = @import("entity.zig").ArchetypeSignature;
+const CompoentId = @import("components.zig").ComponentId;
 
 pub const SystemError = error{
     InitError,
+    MissingEntityLocation,
+};
+
+pub const EntityLocation = struct {
+    archetype: *Archetype,
+    idx: usize,
 };
 
 /// System in a an ECS is a database that keeps track of entities and caches them by archetypes
 /// It also fulfills queries by said archetypes
 pub fn System(
     comptime max_archetypes: usize,
-    comptime max_entities: usize,
     comptime render_ctxs: []const RenderContext,
 ) type {
     return struct {
@@ -25,7 +33,7 @@ pub fn System(
 
         // Data associated with ECS management
         archetypes: [max_archetypes]Archetype = undefined,
-        entities: [max_entities]u32 = @splat(0),
+        entity_locations: std.HashMap(Entity, EntityLocation) = undefined,
         next_entity_id: u32 = 0,
 
         pub fn init(self: *Self, allocator: std.mem.Allocator) SystemError!void {
@@ -50,15 +58,38 @@ pub fn System(
         /// - Look through all the archetypes and find a match. If there wasn't one
         ///   create it. We can't dynamically construct types in runtime, so we
         ///   would have to pregenerate all of them during comptime
+        /// - Insert the entity to archetype obtained from last step
         pub fn addComponent(
             self: *Self,
             comptime ComponentType: type,
             entity: u32,
-            component: *ComponentType,
-        ) void {
-            _ = self;
-            _ = entity;
+            component: ComponentType,
+        ) SystemError!void {
+            const entity_location = self.entity_locations.get(entity) orelse return SystemError.MissingEntityLocation;
+            const src_arch = entity_location.archetype;
+            // const src_idx = entity_location.idx;
+            const src_sig = &src_arch.signature;
+            const incoming_id = CompoentId(ComponentType);
+            const new_component_count = src_sig.component_ids.len + 1;
             _ = component;
+
+            var new_ids = try self.alloc.alloc(u32, new_component_count);
+            defer self.alloc.free(new_ids);
+
+            for (src_sig.component_ids, 0..) |id, i| {
+                new_ids[i] = id;
+            }
+            new_ids[new_component_count - 1] = incoming_id;
+
+            // Retrieve the components (bytes) associated with the entity
+            for (self.archetypes) |arch| {
+                // We found an existing archetype with the same signature
+                if (arch.signature.matches(new_ids)) {
+                    break;
+                }
+            } else {
+                // We did not find an existing archetype and therefore we need to create one
+            }
         }
 
         fn query(self: Self) ?[]u32 {

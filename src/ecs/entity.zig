@@ -24,10 +24,7 @@ pub const Archetype = struct {
     component_sizes: ComponentSizeMap,
 
     pub fn initWithComponentIds(alloc: std.mem.Allocator, component_ids: []const u32) EntityError!Self {
-        const sorted_ids = try alloc.dupe(u32, component_ids);
-        std.mem.sort(u32, sorted_ids, {}, std.sort.asc(u32));
-
-        const signature = ArchetypeSignature{ .component_ids = sorted_ids };
+        const signature = try ArchetypeSignature.init(alloc, component_ids);
 
         return .{
             .alloc = alloc,
@@ -45,7 +42,7 @@ pub const Archetype = struct {
 
         const signature = sig: {
             const fields = components_info.@"struct".fields;
-            const component_ids = try alloc.alloc(u32, fields.len);
+            var component_ids: [fields.len]u32 = undefined;
             inline for (fields, 0..) |field, i| {
                 const @"type" = @field(components, field.name);
                 const id = ComponentId(@"type");
@@ -60,9 +57,9 @@ pub const Archetype = struct {
 
                 component_ids[i] = id;
             }
-            std.mem.sort(u32, component_ids, {}, std.sort.asc(u32));
+            std.mem.sort(u32, &component_ids, {}, std.sort.asc(u32));
 
-            break :sig ArchetypeSignature{ .component_ids = component_ids };
+            break :sig try ArchetypeSignature.init(alloc, &component_ids);
         };
 
         return .{
@@ -82,7 +79,7 @@ pub const Archetype = struct {
 
         self.components_map.deinit();
         self.entities.deinit();
-        self.signature.deinit(self.alloc);
+        self.signature.deinit();
         self.component_sizes.deinit();
     }
 
@@ -118,11 +115,15 @@ pub const Archetype = struct {
         self.entities_idx += 1;
     }
 
-    pub fn removeEntity(self: *Self, to_remove: Entity) EntityError!void {
+    pub fn removeEntity(self: *Self, to_remove: Entity) EntityError!EntityBundle {
         const idx_res = for (self.entities.items, 0..) |id, i| {
             if (id == to_remove) break @as(u32, @intCast(i));
         } else EntityError.EntityNotFound;
         const idx: u32 = try idx_res;
+
+        // Create a sink for the to-be deleted elements
+        var sink = try EntityBundle.init(self.alloc, to_remove);
+        errdefer sink.deinit();
 
         // First, cycle through the component map to remove the associated component
         var cm_iter = self.components_map.iterator();
@@ -137,6 +138,10 @@ pub const Archetype = struct {
             const element_to_remove_start = idx * component_size;
             const last_element_idx = self.entities_idx - 1;
             const last_element_start = last_element_idx * component_size;
+
+            // Put the deleted elements in the sink
+            const byte_arr = try sink.components.getOrPutValue(component_id, std.ArrayList(u8).init(self.alloc));
+            try byte_arr.value_ptr.appendSlice(components.items[element_to_remove_start .. element_to_remove_start + component_size]);
 
             // Only swap if we're not removing the last element
             if (idx != last_element_idx) {
@@ -155,6 +160,8 @@ pub const Archetype = struct {
 
         // Finally, we decrement the entity_idx
         self.entities_idx -= 1;
+
+        return sink;
     }
 
     pub fn getColumn(self: Self, comptime T: type) ?[]T {
@@ -170,9 +177,19 @@ pub const ArchetypeSignature = struct {
     const Self = @This();
 
     component_ids: []const u32,
+    alloc: std.mem.Allocator = undefined,
 
-    pub fn deinit(self: Self, alloc: std.mem.Allocator) void {
-        alloc.free(self.component_ids);
+    pub fn init(alloc: std.mem.Allocator, component_ids: []const u32) !Self {
+        const sorted_ids = try alloc.dupe(u32, component_ids);
+        std.mem.sort(u32, sorted_ids, {}, std.sort.asc(u32));
+        return .{
+            .alloc = alloc,
+            .component_ids = sorted_ids,
+        };
+    }
+
+    pub fn deinit(self: Self) void {
+        self.alloc.free(self.component_ids);
     }
 
     pub fn matches(self: Self, query_components: []const u32) bool {
@@ -187,5 +204,33 @@ pub const ArchetypeSignature = struct {
         }
 
         return true;
+    }
+};
+
+pub const EntityBundle = struct {
+    const Self = @This();
+
+    entity_id: Entity,
+    components: ComponentsMap,
+    alloc: std.mem.Allocator,
+
+    pub fn init(alloc: std.mem.Allocator, entity_id: Entity) !Self {
+        const components = std.HashMap(u32, std.ArrayList(u8), std.hash_map.AutoContext(u32), 80).init(alloc);
+
+        return .{
+            .entity_id = entity_id,
+            .components = components,
+            .alloc = alloc,
+        };
+    }
+
+    pub fn deinit(self: *Self) void {
+        var iter = self.components.valueIterator();
+
+        while (iter.next()) |byte_array| {
+            byte_array.deinit();
+        }
+
+        self.components.deinit();
     }
 };
