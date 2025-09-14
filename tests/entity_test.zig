@@ -103,6 +103,62 @@ test "archetype init and add" {
     std.debug.assert(res == error.IncompatibleArchetype);
 }
 
+test "achetype init and add with component byte arrays" {
+    const alloc = std.testing.allocator;
+    var entity_id: Entity = 0;
+
+    var archetype = Archetype.init(alloc, .{ TestComponentOne, TestComponentTwo }) catch unreachable;
+    defer archetype.deinit();
+
+    const test_comp_one = TestComponentOne{
+        .field_one = 1,
+        .field_two = 2,
+    };
+    const test_comp_two = TestComponentTwo{
+        .field_one = 3,
+        .field_two = 4,
+    };
+
+    var component_map = arr: {
+        const comp_one_as_bytes = std.mem.asBytes(&test_comp_one);
+        const comp_two_as_bytes = std.mem.asBytes(&test_comp_two);
+
+        var comp_one_arr = std.ArrayList(u8).init(std.testing.allocator);
+        try comp_one_arr.appendSlice(comp_one_as_bytes);
+        var comp_two_arr = std.ArrayList(u8).init(std.testing.allocator);
+        try comp_two_arr.appendSlice(comp_two_as_bytes);
+
+        var res = std.HashMap(u32, std.ArrayList(u8), std.hash_map.AutoContext(u32), 80).init(std.testing.allocator);
+        try res.put(ComponentId(@TypeOf(test_comp_one)), comp_one_arr);
+        try res.put(ComponentId(@TypeOf(test_comp_two)), comp_two_arr);
+
+        break :arr res;
+    };
+    const res = archetype.addEntityWithComponentByteArrays(entity_id, &component_map);
+    entity_id += 1;
+    const is_err = if (res) |_| false else |_| true;
+    std.debug.assert(!is_err);
+
+    // // Since we sort the component ids before we register them, changing the order should not
+    // // result in a mismatch
+    // res = archetype.addEntity(entity_id, .{ test_comp_two, test_comp_one });
+    // entity_id += 1;
+    // is_err = if (res) |_| false else |_| true;
+    // std.debug.assert(!is_err);
+    //
+    // // But a total differing in struct should error
+    // res = archetype.addEntity(entity_id, .{test_comp_two});
+    // std.debug.assert(res == error.IncompatibleArchetype);
+    //
+    // // It should error out if the struct has different fields
+    // const test_comp_three = TestComponentThree{
+    //     .field_one = 1,
+    //     .field_two = 2,
+    // };
+    // res = archetype.addEntity(entity_id, .{ test_comp_one, test_comp_three });
+    // std.debug.assert(res == error.IncompatibleArchetype);
+}
+
 test "archetype remove entity" {
     const alloc = std.testing.allocator;
     var entity_id: Entity = 0;
@@ -136,7 +192,8 @@ test "archetype remove entity" {
     const component_one_id = ComponentId(TestComponentOne);
     const component_one_array = unwrapped_res.components.get(component_one_id) orelse unreachable;
     const test_component_one = std.mem.bytesToValue(TestComponentOne, component_one_array.items[0..@sizeOf(TestComponentOne)]);
-    std.debug.print("test_component_one: {any}\n", .{test_component_one});
+    std.debug.assert(test_component_one.field_one == 1);
+    std.debug.assert(test_component_one.field_two == 2);
 
     std.debug.assert(archetype.entities_idx == 1);
     var iter = archetype.components_map.iterator();

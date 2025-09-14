@@ -62,9 +62,17 @@ pub const Archetype = struct {
             break :sig try ArchetypeSignature.init(alloc, &component_ids);
         };
 
+        const components_map = map: {
+            var components_map = ComponentsMap.init(alloc);
+            for (signature.component_ids) |id| {
+                try components_map.put(id, std.ArrayList(u8).init(alloc));
+            }
+            break :map components_map;
+        };
+
         return .{
             .alloc = alloc,
-            .components_map = ComponentsMap.init(alloc),
+            .components_map = components_map,
             .entities = std.ArrayList(Entity).init(alloc),
             .signature = signature,
             .component_sizes = component_sizes,
@@ -113,6 +121,36 @@ pub const Archetype = struct {
 
         try self.entities.append(entity_id);
         self.entities_idx += 1;
+    }
+
+    /// This is mainly used for situations where we don't explicitly know the type of components we are dealing with.
+    /// This is needed because unlike types, we can dynamically work with u8s.
+    /// Takes ownership of the input.
+    pub fn addEntityWithComponentByteArrays(self: *Self, entity_id: Entity, components_as_bytes: *ComponentsMap) EntityError!void {
+        defer {
+            var val_iter = components_as_bytes.valueIterator();
+            while (val_iter.next()) |arr| {
+                arr.deinit();
+            }
+            components_as_bytes.deinit();
+        }
+
+        var incoming_iter = components_as_bytes.iterator();
+        while (incoming_iter.next()) |entry| {
+            const key = entry.key_ptr.*;
+            const value = entry.value_ptr;
+
+            // TODO: maybe we need to unwind here (and undo changes that was done) when we error out here
+            var corresponding_row = self.components_map.getPtr(key) orelse return EntityError.EntityNotFound;
+            std.debug.assert(blk: {
+                const component_size = self.component_sizes.get(key) orelse @panic("component id not found in component sizes");
+                break :blk (component_size == value.items.len);
+            });
+            try corresponding_row.appendSlice(value.items);
+        }
+
+        self.entities_idx += 1;
+        try self.entities.append(entity_id);
     }
 
     pub fn removeEntity(self: *Self, to_remove: Entity) EntityError!EntityBundle {

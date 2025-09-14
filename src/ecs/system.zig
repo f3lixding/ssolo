@@ -67,11 +67,9 @@ pub fn System(
         ) SystemError!void {
             const entity_location = self.entity_locations.get(entity) orelse return SystemError.MissingEntityLocation;
             const src_arch = entity_location.archetype;
-            // const src_idx = entity_location.idx;
             const src_sig = &src_arch.signature;
             const incoming_id = CompoentId(ComponentType);
             const new_component_count = src_sig.component_ids.len + 1;
-            _ = component;
 
             var new_ids = try self.alloc.alloc(u32, new_component_count);
             defer self.alloc.free(new_ids);
@@ -81,10 +79,14 @@ pub fn System(
             }
             new_ids[new_component_count - 1] = incoming_id;
 
+            const bundle = try src_arch.removeEntity(entity);
+            _ = bundle;
+
             // Retrieve the components (bytes) associated with the entity
             for (self.archetypes) |arch| {
                 // We found an existing archetype with the same signature
                 if (arch.signature.matches(new_ids)) {
+                    _ = component;
                     break;
                 }
             } else {
