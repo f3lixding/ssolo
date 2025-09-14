@@ -1,6 +1,8 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+const MAX_COMPONENTS = 1000;
+
 const ComponentId = @import("components.zig").ComponentId;
 
 pub const Entity = u32;
@@ -23,15 +25,55 @@ pub const Archetype = struct {
     entities_idx: usize = 0,
     component_sizes: ComponentSizeMap,
 
-    pub fn initWithComponentIds(alloc: std.mem.Allocator, component_ids: []const u32) EntityError!Self {
-        const signature = try ArchetypeSignature.init(alloc, component_ids);
+    /// This is used for Archetype creation for when new components are added
+    /// Takes ownership of the bundle passed in
+    pub fn initWithEntityBundle(alloc: std.mem.Allocator, entity_bundle: *EntityBundle) EntityError!Self {
+        var err: ?EntityError = null;
+        defer if (err != null) entity_bundle.deinit();
+
+        var component_ids: [MAX_COMPONENTS]u32 = undefined;
+        var key_iter = entity_bundle.components.keyIterator();
+        var idx: usize = 0;
+        while (key_iter.next()) |key| : (idx += 1) {
+            component_ids[idx] = key.*;
+        }
+
+        var new_map = ComponentsMap.init(alloc);
+        var new_sizes = ComponentSizeMap.init(alloc);
+        var iter = entity_bundle.components.iterator();
+
+        while (iter.next()) |entry| {
+            var new_arr = std.ArrayList(u8).init(alloc);
+            new_arr.appendSlice(entry.value_ptr.items) catch |e| {
+                err = e;
+                return e;
+            };
+            new_map.put(entry.key_ptr.*, new_arr) catch |e| {
+                err = e;
+                return e;
+            };
+            new_sizes.put(entry.key_ptr.*, entry.value_ptr.items.len);
+        }
 
         return .{
             .alloc = alloc,
-            .components_map = ComponentsMap.init(alloc),
-            .entities = std.ArrayList(Entity).init(alloc),
-            .signature = signature,
-            .component_sizes = ComponentSizeMap.init(alloc),
+            .signature = sig: {
+                const sig = ArchetypeSignature.init(alloc, &component_ids) catch |e| {
+                    err = e;
+                    return e;
+                };
+                break :sig sig;
+            },
+            .components_map = new_map,
+            .entities = entity: {
+                var entity_list = std.ArrayList(Entity).init(alloc);
+                entity_list.append(entity_bundle.entity_id) catch |e| {
+                    err = e;
+                    return e;
+                };
+                break :entity entity_list;
+            },
+            .component_sizes = new_sizes,
         };
     }
 
@@ -126,22 +168,20 @@ pub const Archetype = struct {
     /// This is mainly used for situations where we don't explicitly know the type of components we are dealing with.
     /// This is needed because unlike types, we can dynamically work with u8s.
     /// Takes ownership of the input.
-    pub fn addEntityWithComponentByteArrays(self: *Self, entity_id: Entity, components_as_bytes: *ComponentsMap) EntityError!void {
-        defer {
-            var val_iter = components_as_bytes.valueIterator();
-            while (val_iter.next()) |arr| {
-                arr.deinit();
-            }
-            components_as_bytes.deinit();
-        }
+    pub fn addEntityWithBundle(self: *Self, entity_bundle: *EntityBundle) EntityError!void {
+        var err: ?EntityError = null;
+        defer if (err == null) entity_bundle.deinit();
 
-        var incoming_iter = components_as_bytes.iterator();
+        var incoming_iter = entity_bundle.components.iterator();
         while (incoming_iter.next()) |entry| {
             const key = entry.key_ptr.*;
             const value = entry.value_ptr;
 
             // TODO: maybe we need to unwind here (and undo changes that was done) when we error out here
-            var corresponding_row = self.components_map.getPtr(key) orelse return EntityError.EntityNotFound;
+            var corresponding_row = self.components_map.getPtr(key) orelse {
+                err = EntityError.EntityNotFound;
+                return EntityError.EntityNotFound;
+            };
             std.debug.assert(blk: {
                 const component_size = self.component_sizes.get(key) orelse @panic("component id not found in component sizes");
                 break :blk (component_size == value.items.len);
@@ -150,7 +190,7 @@ pub const Archetype = struct {
         }
 
         self.entities_idx += 1;
-        try self.entities.append(entity_id);
+        try self.entities.append(entity_bundle.entity_id);
     }
 
     pub fn removeEntity(self: *Self, to_remove: Entity) EntityError!EntityBundle {
@@ -248,7 +288,7 @@ pub const ArchetypeSignature = struct {
 pub const EntityBundle = struct {
     const Self = @This();
 
-    entity_id: Entity,
+    entity_ids: std.ArrayList(Entity),
     components: ComponentsMap,
     alloc: std.mem.Allocator,
 
@@ -270,5 +310,13 @@ pub const EntityBundle = struct {
         }
 
         self.components.deinit();
+    }
+
+    pub fn addComponent(self: *Self, component: anytype) !void {
+        const component_id = ComponentId(@TypeOf(component));
+        const component_as_bytes = std.mem.asBytes(&component);
+
+        var arr = try self.components.getOrPutValue(component_id, std.ArrayList(u8).init(self.alloc));
+        try arr.value_ptr.appendSlice(component_as_bytes);
     }
 };

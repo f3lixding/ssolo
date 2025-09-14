@@ -1,16 +1,20 @@
 const std = @import("std");
 const sg = @import("sokol").gfx;
-const Entity = @import("entity.zig").Entity;
+
+const et = @import("entity.zig");
+const Entity = et.Entity;
+const Archetype = et.Archetype;
+const ArchetypeSignature = et.ArchetypeSignature;
+const EntityBundle = et.EntityBundle;
+const EntityError = et.EntityError;
 
 const RenderContext = @import("root.zig").RenderContext;
-const Archetype = @import("entity.zig").Archetype;
-const ArchetypeSignature = @import("entity.zig").ArchetypeSignature;
 const CompoentId = @import("components.zig").ComponentId;
 
 pub const SystemError = error{
     InitError,
     MissingEntityLocation,
-};
+} || EntityError;
 
 pub const EntityLocation = struct {
     archetype: *Archetype,
@@ -33,6 +37,7 @@ pub fn System(
 
         // Data associated with ECS management
         archetypes: [max_archetypes]Archetype = undefined,
+        arch_idx: usize = 0,
         entity_locations: std.HashMap(Entity, EntityLocation) = undefined,
         next_entity_id: u32 = 0,
 
@@ -79,18 +84,24 @@ pub fn System(
             }
             new_ids[new_component_count - 1] = incoming_id;
 
-            const bundle = try src_arch.removeEntity(entity);
-            _ = bundle;
+            var bundle = bundle: {
+                var bundle = try src_arch.removeEntity(entity);
+                try bundle.addComponent(component);
+                break :bundle bundle;
+            };
 
             // Retrieve the components (bytes) associated with the entity
             for (self.archetypes) |arch| {
                 // We found an existing archetype with the same signature
                 if (arch.signature.matches(new_ids)) {
-                    _ = component;
+                    try arch.addEntityWithBundle(&bundle);
                     break;
                 }
             } else {
                 // We did not find an existing archetype and therefore we need to create one
+                const arch = try Archetype.initWithEntityBundle(self.alloc, &bundle);
+                self.archetypes[self.arch_idx] = arch;
+                self.arch_idx += 1;
             }
         }
 

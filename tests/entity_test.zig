@@ -3,6 +3,7 @@ const ecs = @import("../src/ecs/root.zig");
 const Archetype = ecs.Archetype;
 const ArchetypeSignature = ecs.ArchetypeSignature;
 const Entity = ecs.Entity;
+const EntityBundle = ecs.EntityBundle;
 const ComponentId = ecs.ComponentId;
 
 const TestComponentOne = struct {
@@ -119,7 +120,7 @@ test "achetype init and add with component byte arrays" {
         .field_two = 4,
     };
 
-    var component_map = arr: {
+    var entity_bundle = arr: {
         const comp_one_as_bytes = std.mem.asBytes(&test_comp_one);
         const comp_two_as_bytes = std.mem.asBytes(&test_comp_two);
 
@@ -128,35 +129,49 @@ test "achetype init and add with component byte arrays" {
         var comp_two_arr = std.ArrayList(u8).init(std.testing.allocator);
         try comp_two_arr.appendSlice(comp_two_as_bytes);
 
-        var res = std.HashMap(u32, std.ArrayList(u8), std.hash_map.AutoContext(u32), 80).init(std.testing.allocator);
-        try res.put(ComponentId(@TypeOf(test_comp_one)), comp_one_arr);
-        try res.put(ComponentId(@TypeOf(test_comp_two)), comp_two_arr);
+        var bundle = try EntityBundle.init(std.testing.allocator, entity_id);
+        try bundle.components.put(ComponentId(@TypeOf(test_comp_one)), comp_one_arr);
+        try bundle.components.put(ComponentId(@TypeOf(test_comp_two)), comp_two_arr);
 
-        break :arr res;
+        break :arr bundle;
     };
-    const res = archetype.addEntityWithComponentByteArrays(entity_id, &component_map);
+    const res = archetype.addEntityWithBundle(&entity_bundle);
     entity_id += 1;
     const is_err = if (res) |_| false else |_| true;
     std.debug.assert(!is_err);
+}
 
-    // // Since we sort the component ids before we register them, changing the order should not
-    // // result in a mismatch
-    // res = archetype.addEntity(entity_id, .{ test_comp_two, test_comp_one });
-    // entity_id += 1;
-    // is_err = if (res) |_| false else |_| true;
-    // std.debug.assert(!is_err);
-    //
-    // // But a total differing in struct should error
-    // res = archetype.addEntity(entity_id, .{test_comp_two});
-    // std.debug.assert(res == error.IncompatibleArchetype);
-    //
-    // // It should error out if the struct has different fields
-    // const test_comp_three = TestComponentThree{
-    //     .field_one = 1,
-    //     .field_two = 2,
-    // };
-    // res = archetype.addEntity(entity_id, .{ test_comp_one, test_comp_three });
-    // std.debug.assert(res == error.IncompatibleArchetype);
+test "achetype init with entity bundle" {
+    const alloc = std.testing.allocator;
+    const entity_id: Entity = 0;
+
+    const test_comp_one = TestComponentOne{
+        .field_one = 1,
+        .field_two = 2,
+    };
+    const test_comp_two = TestComponentTwo{
+        .field_one = 3,
+        .field_two = 4,
+    };
+
+    var entity_bundle = arr: {
+        const comp_one_as_bytes = std.mem.asBytes(&test_comp_one);
+        const comp_two_as_bytes = std.mem.asBytes(&test_comp_two);
+
+        var comp_one_arr = std.ArrayList(u8).init(std.testing.allocator);
+        try comp_one_arr.appendSlice(comp_one_as_bytes);
+        var comp_two_arr = std.ArrayList(u8).init(std.testing.allocator);
+        try comp_two_arr.appendSlice(comp_two_as_bytes);
+
+        var bundle = try EntityBundle.init(std.testing.allocator, entity_id);
+        try bundle.components.put(ComponentId(@TypeOf(test_comp_one)), comp_one_arr);
+        try bundle.components.put(ComponentId(@TypeOf(test_comp_two)), comp_two_arr);
+
+        break :arr bundle;
+    };
+
+    var archetype = try Archetype.initWithEntityBundle(alloc, &entity_bundle);
+    defer archetype.deinit();
 }
 
 test "archetype remove entity" {
