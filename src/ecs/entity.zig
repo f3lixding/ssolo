@@ -285,10 +285,12 @@ pub const ArchetypeSignature = struct {
     }
 };
 
+// This actually seems awfully inefficient
+// Maybe we use static memory here?
 pub const EntityBundle = struct {
     const Self = @This();
 
-    entity_ids: std.ArrayList(Entity),
+    entity_id: Entity,
     components: ComponentsMap,
     alloc: std.mem.Allocator,
 

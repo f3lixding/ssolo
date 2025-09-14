@@ -20,6 +20,12 @@ pub const EntityLocation = struct {
     archetype: *Archetype,
     idx: usize,
 };
+pub const EntityLocationsMap = std.HashMap(
+    Entity,
+    EntityLocation,
+    std.hash_map.AutoContext(Entity),
+    80,
+);
 
 /// System in a an ECS is a database that keeps track of entities and caches them by archetypes
 /// It also fulfills queries by said archetypes
@@ -38,21 +44,41 @@ pub fn System(
         // Data associated with ECS management
         archetypes: [max_archetypes]Archetype = undefined,
         arch_idx: usize = 0,
-        entity_locations: std.HashMap(Entity, EntityLocation) = undefined,
+        entity_locations: EntityLocationsMap,
         next_entity_id: u32 = 0,
 
-        pub fn init(self: *Self, allocator: std.mem.Allocator) SystemError!void {
-            self.alloc = allocator;
+        pub fn init(alloc: std.mem.Allocator) SystemError!Self {
+            var self: Self = .{
+                .alloc = alloc,
+                .entity_locations = EntityLocationsMap.init(alloc),
+            };
+
             inline for (render_ctxs, 0..) |ctx, i| {
                 self.pips[i] = ctx.get_pip_fn_ptr();
                 self.samplers[i] = ctx.get_sampler_fn_ptr();
             }
+
+            return self;
         }
 
-        pub fn createEntity(self: *Self) u32 {
-            const current_id = self.next_entity_id;
-            self.next_entity_id += 1;
-            return current_id;
+        pub fn deinit(self: *Self) void {
+            self.entity_locations.deinit();
+
+            for (0..self.arch_idx) |i| {
+                self.archetypes[i].deinit();
+            }
+            // TODO: deinit other fields
+        }
+
+        // For testing only
+        pub fn addArchetype(self: *Self, arch: Archetype) SystemError!void {
+            self.archetypes[self.arch_idx] = arch;
+            self.arch_idx += 1;
+
+            for (arch.entities.items, 0..) |entity, idx| {
+                const location = EntityLocation{ .archetype = &self.archetypes[self.arch_idx], .idx = idx };
+                try self.entity_locations.put(entity, location);
+            }
         }
 
         /// Add a component to a particular entity.
@@ -64,44 +90,49 @@ pub fn System(
         ///   create it. We can't dynamically construct types in runtime, so we
         ///   would have to pregenerate all of them during comptime
         /// - Insert the entity to archetype obtained from last step
+        // TODO: Make this faster (i.e. fewer pointer chasing and allocations)
         pub fn addComponent(
             self: *Self,
             comptime ComponentType: type,
-            entity: u32,
-            component: ComponentType,
+            entities: []Entity,
+            components: []ComponentType,
         ) SystemError!void {
-            const entity_location = self.entity_locations.get(entity) orelse return SystemError.MissingEntityLocation;
-            const src_arch = entity_location.archetype;
-            const src_sig = &src_arch.signature;
-            const incoming_id = CompoentId(ComponentType);
-            const new_component_count = src_sig.component_ids.len + 1;
+            std.debug.assert(entities.len == components.len);
 
-            var new_ids = try self.alloc.alloc(u32, new_component_count);
-            defer self.alloc.free(new_ids);
+            for (entities, components) |entity, component| {
+                const entity_location = self.entity_locations.get(entity) orelse return SystemError.MissingEntityLocation;
+                const src_arch = entity_location.archetype;
+                const src_sig = &src_arch.signature;
+                const incoming_id = CompoentId(ComponentType);
+                const new_component_count = src_sig.component_ids.len + 1;
 
-            for (src_sig.component_ids, 0..) |id, i| {
-                new_ids[i] = id;
-            }
-            new_ids[new_component_count - 1] = incoming_id;
+                var new_ids = try self.alloc.alloc(u32, new_component_count);
+                defer self.alloc.free(new_ids);
 
-            var bundle = bundle: {
-                var bundle = try src_arch.removeEntity(entity);
-                try bundle.addComponent(component);
-                break :bundle bundle;
-            };
-
-            // Retrieve the components (bytes) associated with the entity
-            for (self.archetypes) |arch| {
-                // We found an existing archetype with the same signature
-                if (arch.signature.matches(new_ids)) {
-                    try arch.addEntityWithBundle(&bundle);
-                    break;
+                for (src_sig.component_ids, 0..) |id, i| {
+                    new_ids[i] = id;
                 }
-            } else {
-                // We did not find an existing archetype and therefore we need to create one
-                const arch = try Archetype.initWithEntityBundle(self.alloc, &bundle);
-                self.archetypes[self.arch_idx] = arch;
-                self.arch_idx += 1;
+                new_ids[new_component_count - 1] = incoming_id;
+
+                var bundle = bundle: {
+                    var bundle = try src_arch.removeEntity(entity);
+                    try bundle.addComponent(component);
+                    break :bundle bundle;
+                };
+
+                // Retrieve the components (bytes) associated with the entity
+                for (self.archetypes) |arch| {
+                    // We found an existing archetype with the same signature
+                    if (arch.signature.matches(new_ids)) {
+                        try arch.addEntityWithBundle(&bundle);
+                        break;
+                    }
+                } else {
+                    // We did not find an existing archetype and therefore we need to create one
+                    const arch = try Archetype.initWithEntityBundle(self.alloc, &bundle);
+                    self.archetypes[self.arch_idx] = arch;
+                    self.arch_idx += 1;
+                }
             }
         }
 
