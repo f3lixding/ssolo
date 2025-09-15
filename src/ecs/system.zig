@@ -9,7 +9,9 @@ const EntityBundle = et.EntityBundle;
 const EntityError = et.EntityError;
 
 const RenderContext = @import("root.zig").RenderContext;
-const CompoentId = @import("components.zig").ComponentId;
+const comp = @import("components.zig");
+const CompoentId = comp.ComponentId;
+const Renderable = comp.Renderable;
 
 pub const SystemError = error{
     InitError,
@@ -20,6 +22,7 @@ pub const EntityLocation = struct {
     archetype: *Archetype,
     idx: usize,
 };
+
 pub const EntityLocationsMap = std.HashMap(
     Entity,
     EntityLocation,
@@ -73,12 +76,13 @@ pub fn System(
         // For testing only
         pub fn addArchetype(self: *Self, arch: Archetype) SystemError!void {
             self.archetypes[self.arch_idx] = arch;
-            self.arch_idx += 1;
 
             for (arch.entities.items, 0..) |entity, idx| {
                 const location = EntityLocation{ .archetype = &self.archetypes[self.arch_idx], .idx = idx };
                 try self.entity_locations.put(entity, location);
             }
+
+            self.arch_idx += 1;
         }
 
         /// Add a component to a particular entity.
@@ -88,7 +92,7 @@ pub fn System(
         /// - Create a tuple struct for components
         /// - Look through all the archetypes and find a match. If there wasn't one
         ///   create it. We can't dynamically construct types in runtime, so we
-        ///   would have to pregenerate all of them during comptime
+        ///   would have to regenerate all of them during comptime
         /// - Insert the entity to archetype obtained from last step
         // TODO: Make this faster (i.e. fewer pointer chasing and allocations)
         pub fn addComponent(
@@ -104,7 +108,7 @@ pub fn System(
                 const src_arch = entity_location.archetype;
                 const src_sig = &src_arch.signature;
                 const incoming_id = CompoentId(ComponentType);
-                const new_component_count = src_sig.component_ids.len + 1;
+                const new_component_count = src_sig.component_ids.len;
 
                 var new_ids = try self.alloc.alloc(u32, new_component_count);
                 defer self.alloc.free(new_ids);
@@ -121,10 +125,13 @@ pub fn System(
                 };
 
                 // Retrieve the components (bytes) associated with the entity
-                for (self.archetypes) |arch| {
+                for (&self.archetypes) |*arch| {
                     // We found an existing archetype with the same signature
                     if (arch.signature.matches(new_ids)) {
                         try arch.addEntityWithBundle(&bundle);
+                        var location = self.entity_locations.getPtr(entity) orelse return SystemError.MissingEntityLocation;
+                        location.archetype = arch;
+                        location.idx = arch.entities_idx - 1;
                         break;
                     }
                 } else {
@@ -132,11 +139,15 @@ pub fn System(
                     const arch = try Archetype.initWithEntityBundle(self.alloc, &bundle);
                     self.archetypes[self.arch_idx] = arch;
                     self.arch_idx += 1;
+
+                    var location = self.entity_locations.getPtr(entity) orelse return SystemError.MissingEntityLocation;
+                    location.archetype = &self.archetypes[self.arch_idx];
+                    location.idx = 0;
                 }
             }
         }
 
-        fn query(self: Self) ?[]u32 {
+        fn query_with_id(self: Self, comptime CompType: type) ?[]CompType {
             _ = self;
             return null;
         }
@@ -151,8 +162,15 @@ pub fn System(
             // The following need to be done here:
             // - We need to query everything in the database for entites that
             //   has the Renderable component
+            // - Sort them based on their rendering order
             // - Loop through the query results and call update and then render
-            _ = self;
+            const comps = self.query_with_id(Renderable) orelse return SystemError.EntityNotFound;
+            defer self.alloc.free(comps);
+            std.mem.sort();
+
+            for (comps) |component| {
+                _ = component;
+            }
         }
     };
 }

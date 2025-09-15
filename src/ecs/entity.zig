@@ -29,7 +29,7 @@ pub const Archetype = struct {
     /// Takes ownership of the bundle passed in
     pub fn initWithEntityBundle(alloc: std.mem.Allocator, entity_bundle: *EntityBundle) EntityError!Self {
         var err: ?EntityError = null;
-        defer if (err != null) entity_bundle.deinit();
+        defer if (err == null) entity_bundle.deinit();
 
         var component_ids: [MAX_COMPONENTS]u32 = undefined;
         var key_iter = entity_bundle.components.keyIterator();
@@ -52,7 +52,7 @@ pub const Archetype = struct {
                 err = e;
                 return e;
             };
-            new_sizes.put(entry.key_ptr.*, entry.value_ptr.items.len);
+            try new_sizes.put(entry.key_ptr.*, entry.value_ptr.items.len);
         }
 
         return .{
