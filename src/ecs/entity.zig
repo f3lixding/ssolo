@@ -270,11 +270,10 @@ pub const ArchetypeSignature = struct {
         self.alloc.free(self.component_ids);
     }
 
+    /// Note that a match is considered to be found if the archtype's signature
+    /// is a superset of the signatgure being queried
+    /// This is because it is often the case to query for a subset
     pub fn matches(self: Self, query_components: []const u32) bool {
-        if (self.component_ids.len != query_components.len) {
-            return false;
-        }
-
         for (0..query_components.len) |i| {
             if (self.component_ids[i] != query_components[i]) {
                 return false;

@@ -10,7 +10,7 @@ const EntityError = et.EntityError;
 
 const RenderContext = @import("root.zig").RenderContext;
 const comp = @import("components.zig");
-const CompoentId = comp.ComponentId;
+const ComponentId = comp.ComponentId;
 const Renderable = comp.Renderable;
 
 pub const SystemError = error{
@@ -107,7 +107,7 @@ pub fn System(
                 const entity_location = self.entity_locations.get(entity) orelse return SystemError.MissingEntityLocation;
                 const src_arch = entity_location.archetype;
                 const src_sig = &src_arch.signature;
-                const incoming_id = CompoentId(ComponentType);
+                const incoming_id = ComponentId(ComponentType);
                 const new_component_count = src_sig.component_ids.len;
 
                 var new_ids = try self.alloc.alloc(u32, new_component_count);
@@ -147,30 +147,85 @@ pub fn System(
             }
         }
 
-        fn query_with_id(self: Self, comptime CompType: type) ?[]CompType {
-            _ = self;
-            return null;
-        }
-
         /// This is the function that processes the updates that are results of interactivity
         /// i.e. excluding updates of states that are related to spine c runtime
         fn update(self: *Self) SystemError!void {
             _ = self;
         }
 
-        fn render(self: Self) !void {
+        pub fn render(self: Self) !void {
             // The following need to be done here:
             // - We need to query everything in the database for entites that
             //   has the Renderable component
             // - Sort them based on their rendering order
             // - Loop through the query results and call update and then render
-            const comps = self.query_with_id(Renderable) orelse return SystemError.EntityNotFound;
+            const comps = self.query(Renderable) orelse return SystemError.EntityNotFound;
             defer self.alloc.free(comps);
-            std.mem.sort();
+            std.mem.sort(Renderable, comps, {}, struct {
+                fn lessThan(context: void, a: Renderable, b: Renderable) bool {
+                    _ = context;
+                    return a.skeleton.y < b.skeleton.y;
+                }
+            }.lessThan);
 
             for (comps) |component| {
                 _ = component;
             }
         }
+
+        pub fn getQueryResult(self: *Self, comptime ComponentTuple: anytype) !QueryResult {
+            const component_ids = comptime ids: {
+                const info = @typeInfo(@TypeOf(ComponentTuple));
+                if (info != .@"struct") @compileError("Component tuple needs to be a struct");
+
+                const fields = info.@"struct".fields;
+                // because this is in comptime scope we don't really need to heap allocate this
+                var field_ids: [fields.len]u32 = undefined;
+                for (fields, 0..) |field, i| {
+                    const field_type = @field(ComponentTuple, field.name);
+                    field_ids[i] = ComponentId(field_type);
+                }
+                std.mem.sort(u32, &field_ids, {}, std.sort.asc(u32));
+
+                break :ids field_ids;
+            };
+
+            var matching_arches = std.ArrayList(*Archetype).init(self.alloc);
+
+            for (&self.archetypes) |*arch| {
+                if (arch.signature.matches(&component_ids)) {
+                    try matching_arches.append(arch);
+                }
+            }
+
+            return .{
+                .archetypes = try matching_arches.toOwnedSlice(),
+                .alloc = self.alloc,
+            };
+        }
     };
 }
+
+/// This is just an iterator for *Archetype
+pub const QueryResult = struct {
+    const Self = @This();
+
+    archetypes: []*Archetype,
+    alloc: std.mem.Allocator,
+    cur_idx: usize = 0,
+
+    pub fn deinit(self: Self) void {
+        self.alloc.free(self.archetypes);
+    }
+
+    pub fn next(self: *Self) ?*Archetype {
+        if (self.cur_idx < self.archetypes.len) {
+            const to_return = self.archetypes[self.cur_idx];
+            self.cur_idx += 1;
+
+            return to_return;
+        }
+
+        return null;
+    }
+};
