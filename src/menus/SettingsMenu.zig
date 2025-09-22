@@ -47,8 +47,9 @@ pub fn init(self: *Self, alloc: Allocator, top_left_coord: [2]f32, height: i32, 
     self.height = height;
     self.width = width;
     self.pda = PushdownAutomaton{
+        .alloc = alloc,
         .current_state = .Hidden,
-        .stack = std.ArrayList(SymbolType).init(alloc),
+        .stack = .empty,
         .transitionFnPtr = pdaTransitionFn,
     };
 

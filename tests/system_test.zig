@@ -141,8 +141,6 @@ test "system query" {
     // If we query again but with both components we should be getting the same entity as well
     var combo_query_result = system.getQueryResult(.{ TestComponentOne, TestComponentTwo }) catch unreachable;
     defer combo_query_result.deinit();
-    std.debug.print("combo_query_result len: {d}\n", .{combo_query_result.archetypes.len});
-    std.debug.print("arch components map len: {d}\n", .{combo_query_result.archetypes[0].components_map.count()});
 
     while (combo_query_result.next()) |res| {
         const column_one = res.getColumn(TestComponentOne);

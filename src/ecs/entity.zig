@@ -35,7 +35,6 @@ pub const Archetype = struct {
         var key_iter = entity_bundle.components.keyIterator();
         var idx: usize = 0;
         while (key_iter.next()) |key| : (idx += 1) {
-            std.debug.print("idx: {d}, key: {d}\n", .{ idx, key.* });
             component_ids[idx] = key.*;
         }
 

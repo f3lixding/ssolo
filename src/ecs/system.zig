@@ -135,7 +135,6 @@ pub fn System(
                         break;
                     }
                 } else {
-                    std.debug.print("Failed to find a match\n", .{});
                     // We did not find an existing archetype and therefore we need to create one
                     const arch = try Archetype.initWithEntityBundle(self.alloc, &bundle);
                     self.archetypes[self.arch_idx] = arch;
@@ -193,14 +192,11 @@ pub fn System(
 
                 break :ids field_ids;
             };
-            std.debug.print("component ids: {any}\n", .{component_ids});
-            std.debug.print("arch idx: {d}\n", .{self.arch_idx});
 
             var matching_arches = std.ArrayList(*Archetype).init(self.alloc);
 
             for (0..self.arch_idx) |i| {
                 var arch = &self.archetypes[i];
-                std.debug.print("arch sig: {any}\n", .{arch.signature.component_ids});
                 if (arch.signature.matches_absolute(&component_ids)) {
                     try matching_arches.append(arch);
                 }

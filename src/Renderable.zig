@@ -2,7 +2,6 @@
 //! The intention here is for each object type to be represented by an implementation of a Renderable.
 //! And each implementation is to be the owner of the one or more instances of the object.
 const std = @import("std");
-const AllocPrintError = std.fmt.AllocPrintError;
 const Event = @import("sokol").app.Event;
 
 /// This error union represents all the possible error that could come from any of the rendering logic.
@@ -12,7 +11,8 @@ pub const RenderableError = error{
     InitError,
     NullSkeletonData,
     RenderError,
-} || AllocPrintError;
+    OutOfMemory,
+};
 
 alloc: std.mem.Allocator = undefined,
 
@@ -47,12 +47,12 @@ pub fn init(inner_ptr: anytype) !@This() {
         }
 
         pub fn render(ptr: *const anyopaque) RenderableError!void {
-            const self: T = @constCast(@ptrCast(@alignCast(ptr)));
+            const self: T = @ptrCast(@alignCast(@constCast(ptr)));
             return self.render();
         }
 
         pub fn deinit(ptr: *anyopaque) void {
-            const self: T = @constCast(@ptrCast(@alignCast(ptr)));
+            const self: T = @ptrCast(@alignCast(@constCast(ptr)));
             self.deinit();
         }
 

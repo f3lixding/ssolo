@@ -8,9 +8,11 @@ pub fn build(b: *std.Build) void {
 
     const bin_to_add = b.addExecutable(.{
         .name = "ssolo",
-        .target = target,
-        .optimize = optimize,
-        .root_source_file = b.path("src/main.zig"),
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     generate_asset_files(b, force_codegen) catch unreachable;
@@ -42,9 +44,12 @@ pub fn build(b: *std.Build) void {
 
     const test_filter = b.option([]const u8, "filter", "filter for a test");
     const build_unit_tests = b.addTest(.{
-        .root_source_file = b.path("test_main.zig"),
-        .target = target,
-        .optimize = std.builtin.OptimizeMode.Debug,
+        .name = "Test entry point",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test_main.zig"),
+            .target = target,
+            .optimize = std.builtin.OptimizeMode.Debug,
+        }),
         .filters = if (test_filter) |filter| &.{filter} else &.{},
     });
     build_unit_tests.linkLibC();
@@ -190,8 +195,9 @@ fn generate_asset_files(b: *std.Build, force_codegen: bool) !void {
     var asset_map = std.StringHashMap(std.ArrayList([]const u8)).init(b.allocator);
     defer {
         var iterator = asset_map.iterator();
+        const alloc = asset_map.allocator;
         while (iterator.next()) |entry| {
-            entry.value_ptr.*.deinit();
+            entry.value_ptr.*.deinit(alloc);
         }
         asset_map.deinit();
     }
@@ -212,7 +218,8 @@ fn generate_asset_files(b: *std.Build, force_codegen: bool) !void {
             // Note that we are assuming the names are valid variable names
             // They cannot be kebab case
             const file_ext_with_no_dot = file_ext[1..];
-            try collection.append(b.fmt(
+            const alloc = asset_map.allocator;
+            try collection.append(alloc, b.fmt(
                 "pub const {s}_{s} = @embedFile(\"{s}\");\n",
                 .{
                     file_name,
@@ -221,9 +228,9 @@ fn generate_asset_files(b: *std.Build, force_codegen: bool) !void {
                 },
             ));
         } else {
-            var collection = std.ArrayList([]const u8).init(b.allocator);
+            var collection: std.ArrayList([]const u8) = .empty;
             const file_ext_with_no_dot = file_ext[1..];
-            try collection.append(b.fmt(
+            try collection.append(b.allocator, b.fmt(
                 "pub const {s}_{s} = @embedFile(\"{s}\");\n",
                 .{
                     file_name,

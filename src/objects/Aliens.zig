@@ -29,6 +29,7 @@ current_idx: usize = 0,
 skeleton_data: *spc.struct_spSkeletonData = undefined,
 animation_state_data: *spc.struct_spAnimationStateData = undefined,
 sprite_sheet: sg.Image = undefined,
+sprite_sheet_view: sg.View = undefined,
 sampler: sg.Sampler = undefined,
 shader: sg.Shader = undefined,
 pip: sg.Pipeline = undefined,
@@ -49,16 +50,20 @@ pub fn init(self: *@This(), alloc: Allocator) RenderableError!void {
     var image = zigimg.Image.fromMemory(alloc, image_buffer) catch {
         return RenderableError.InitError;
     };
-    defer image.deinit();
+    defer image.deinit(alloc);
 
     self.sprite_sheet = sg.makeImage(.{
         .width = @intCast(image.width),
         .height = @intCast(image.height),
         .data = init: {
             var data = sg.ImageData{};
-            data.subimage[0][0] = sg.asRange(image.pixels.rgba32);
+            data.mip_levels[0] = sg.asRange(image.pixels.rgba32);
             break :init data;
         },
+    });
+    
+    self.sprite_sheet_view = sg.makeView(.{
+        .texture = .{ .image = self.sprite_sheet },
     });
 
     self.skeleton_data = init_bundle.skeleton_data;
@@ -154,8 +159,7 @@ pub fn update(self: *@This(), dt: f32) RenderableError!void {
 
 pub fn render(self: *const @This()) RenderableError!void {
     for (0..self.current_idx) |i| {
-        const image_ptr: *sg.Image = @constCast(&self.sprite_sheet);
-        self.collections[i].render(image_ptr, self.pip, self.sampler) catch |e| {
+        self.collections[i].render(self.sprite_sheet_view, self.pip, self.sampler) catch |e| {
             std.log.err("Error encountered while rendering alien instance: {any}", .{e});
             return RenderableError.RenderError;
         };
@@ -163,6 +167,10 @@ pub fn render(self: *const @This()) RenderableError!void {
 }
 
 pub fn deinit(self: *@This()) void {
+    sg.destroyView(self.sprite_sheet_view);
+    sg.destroyImage(self.sprite_sheet);
+    sg.destroySampler(self.sampler);
+    sg.destroyPipeline(self.pip);
     self.alloc.destroy(self);
 }
 
@@ -258,11 +266,11 @@ const Alien = struct {
 
     pub fn render(
         self: Alien,
-        texture: *sg.Image,
+        texture_view: sg.View,
         pip: sg.Pipeline,
         sampler: sg.Sampler,
     ) !void {
-        util.render(self, texture, pip, sampler);
+        util.render(self, texture_view, pip, sampler);
     }
 
     pub fn deinit(self: Alien) void {

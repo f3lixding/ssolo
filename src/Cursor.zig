@@ -16,6 +16,7 @@ const ButtonState = enum {
 
 const ImageBundle = struct {
     image: sg.Image,
+    view: sg.View,
     height: i32,
     width: i32,
 };
@@ -44,20 +45,23 @@ pub fn init(self: *@This(), alloc: std.mem.Allocator) RenderableError!void {
             std.log.err("Erroring reading image for cursor init", .{});
             return RenderableError.InitError;
         };
-        defer image.deinit();
+        defer image.deinit(self.alloc);
 
         const sg_image = sg.makeImage(.{
             .width = @intCast(image.width),
             .height = @intCast(image.height),
             .data = init: {
                 var data = sg.ImageData{};
-                data.subimage[0][0] = sg.asRange(image.pixels.rgba32);
+                data.mip_levels[0] = sg.asRange(image.pixels.rgba32);
                 break :init data;
             },
         });
 
         self.idle_image = .{
             .image = sg_image,
+            .view = sg.makeView(.{
+                .texture = .{ .image = sg_image },
+            }),
             .height = @intCast(image.height),
             .width = @intCast(image.width),
         };
@@ -69,20 +73,23 @@ pub fn init(self: *@This(), alloc: std.mem.Allocator) RenderableError!void {
             std.log.err("Erroring reading image for cursor init", .{});
             return RenderableError.InitError;
         };
-        defer image.deinit();
+        defer image.deinit(self.alloc);
 
         const sg_image = sg.makeImage(.{
             .width = @intCast(image.width),
             .height = @intCast(image.height),
             .data = init: {
                 var data = sg.ImageData{};
-                data.subimage[0][0] = sg.asRange(image.pixels.rgba32);
+                data.mip_levels[0] = sg.asRange(image.pixels.rgba32);
                 break :init data;
             },
         });
 
         self.left_click_image = .{
             .image = sg_image,
+            .view = sg.makeView(.{
+                .texture = .{ .image = sg_image },
+            }),
             .height = @intCast(image.height),
             .width = @intCast(image.width),
         };
@@ -94,20 +101,23 @@ pub fn init(self: *@This(), alloc: std.mem.Allocator) RenderableError!void {
             std.log.err("Erroring reading image for cursor init", .{});
             return RenderableError.InitError;
         };
-        defer image.deinit();
+        defer image.deinit(self.alloc);
 
         const sg_image = sg.makeImage(.{
             .width = @intCast(image.width),
             .height = @intCast(image.height),
             .data = init: {
                 var data = sg.ImageData{};
-                data.subimage[0][0] = sg.asRange(image.pixels.rgba32);
+                data.mip_levels[0] = sg.asRange(image.pixels.rgba32);
                 break :init data;
             },
         });
 
         self.right_click_image = .{
             .image = sg_image,
+            .view = sg.makeView(.{
+                .texture = .{ .image = sg_image },
+            }),
             .height = @intCast(image.height),
             .width = @intCast(image.width),
         };
@@ -198,10 +208,10 @@ pub fn render(self: *const @This()) void {
             break :ver buffers;
         },
         .index_buffer = self.index_buffer,
-        .images = image: {
-            var images = [_]sg.Image{.{}} ** 16;
-            images[shd.IMG_tex] = current_img.image;
-            break :image images;
+        .views = views: {
+            var views_array = [_]sg.View{.{}} ** 28;
+            views_array[shd.VIEW_tex] = current_img.view;
+            break :views views_array;
         },
         .samplers = smp: {
             var samplers = [_]sg.Sampler{.{}} ** 16;
@@ -245,6 +255,9 @@ pub fn inputEventHandle(self: *@This(), event: [*c]const Event) RenderableError!
 }
 
 pub fn deinit(self: *@This()) void {
+    sg.destroyView(self.idle_image.view);
+    sg.destroyView(self.left_click_image.view);
+    sg.destroyView(self.right_click_image.view);
     sg.destroyImage(self.idle_image.image);
     sg.destroyImage(self.left_click_image.image);
     sg.destroyImage(self.right_click_image.image);

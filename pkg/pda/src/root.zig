@@ -22,11 +22,13 @@ pub fn Pda(comptime StateType: type, comptime SymbolType: type) type {
         current_state: StateType,
         stack: ArrayList(SymbolType),
         transitionFnPtr: TransitionFnPtr,
+        alloc: std.mem.Allocator,
 
         pub fn init(alloc: std.mem.Allocator, init_state: StateType, transition_fn: TransitionFnPtr) Self {
             return .{
                 .current_state = init_state,
-                .stack = ArrayList(SymbolType).init(alloc),
+                .alloc = alloc,
+                .stack = .empty,
                 .transitionFnPtr = transition_fn,
             };
         }
@@ -36,7 +38,8 @@ pub fn Pda(comptime StateType: type, comptime SymbolType: type) type {
         }
 
         pub fn deinit(self: Self) void {
-            self.stack.deinit();
+            var stack = @constCast(&self.stack);
+            stack.deinit(self.alloc);
         }
 
         /// Ingest the incoming symbol and returns an applicable new state
@@ -55,7 +58,7 @@ pub fn Pda(comptime StateType: type, comptime SymbolType: type) type {
                 }
 
                 if (push_symbol) |symbol| {
-                    try self.stack.append(symbol);
+                    try self.stack.append(self.alloc, symbol);
                 }
 
                 return new_state;

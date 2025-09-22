@@ -325,7 +325,7 @@ pub fn addVertex(
 
 pub fn render(
     self: anytype,
-    texture: *sg.Image,
+    texture_view: sg.View,
     pip: sg.Pipeline,
     sampler: sg.Sampler,
 ) void {
@@ -375,10 +375,10 @@ pub fn render(
             break :ver buffers;
         },
         .index_buffer = self.index_buffer,
-        .images = image: {
-            var images = [_]sg.Image{.{}} ** 16;
-            images[shd.IMG_tex] = texture.*;
-            break :image images;
+        .views = views: {
+            var views_array = [_]sg.View{.{}} ** 28;
+            views_array[shd.VIEW_tex] = texture_view;
+            break :views views_array;
         },
         .samplers = smp: {
             var samplers = [_]sg.Sampler{.{}} ** 16;
