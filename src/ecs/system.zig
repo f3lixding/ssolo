@@ -108,7 +108,7 @@ pub fn System(
                 const src_arch = entity_location.archetype;
                 const src_sig = &src_arch.signature;
                 const incoming_id = ComponentId(ComponentType);
-                const new_component_count = src_sig.component_ids.len;
+                const new_component_count = src_sig.component_ids.len + 1;
 
                 var new_ids = try self.alloc.alloc(u32, new_component_count);
                 defer self.alloc.free(new_ids);
@@ -127,7 +127,7 @@ pub fn System(
                 // Retrieve the components (bytes) associated with the entity
                 for (&self.archetypes) |*arch| {
                     // We found an existing archetype with the same signature
-                    if (arch.signature.matches(new_ids)) {
+                    if (arch.signature.matches_absolute(new_ids)) {
                         try arch.addEntityWithBundle(&bundle);
                         var location = self.entity_locations.getPtr(entity) orelse return SystemError.MissingEntityLocation;
                         location.archetype = arch;
@@ -135,6 +135,7 @@ pub fn System(
                         break;
                     }
                 } else {
+                    std.debug.print("Failed to find a match\n", .{});
                     // We did not find an existing archetype and therefore we need to create one
                     const arch = try Archetype.initWithEntityBundle(self.alloc, &bundle);
                     self.archetypes[self.arch_idx] = arch;
@@ -164,6 +165,9 @@ pub fn System(
             std.mem.sort(Renderable, comps, {}, struct {
                 fn lessThan(context: void, a: Renderable, b: Renderable) bool {
                     _ = context;
+                    // Here we are assuming everything that's renderable has a skeleton
+                    // In the future, if we need to render things that are not related
+                    // spine-c we would need to abstract this
                     return a.skeleton.y < b.skeleton.y;
                 }
             }.lessThan);
@@ -189,11 +193,15 @@ pub fn System(
 
                 break :ids field_ids;
             };
+            std.debug.print("component ids: {any}\n", .{component_ids});
+            std.debug.print("arch idx: {d}\n", .{self.arch_idx});
 
             var matching_arches = std.ArrayList(*Archetype).init(self.alloc);
 
-            for (&self.archetypes) |*arch| {
-                if (arch.signature.matches(&component_ids)) {
+            for (0..self.arch_idx) |i| {
+                var arch = &self.archetypes[i];
+                std.debug.print("arch sig: {any}\n", .{arch.signature.component_ids});
+                if (arch.signature.matches_absolute(&component_ids)) {
                     try matching_arches.append(arch);
                 }
             }

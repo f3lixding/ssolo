@@ -130,4 +130,25 @@ test "system query" {
         const col = res.getColumn(TestComponentOne);
         std.debug.assert(col != null);
     }
+
+    // Now we add two multiple components and query them all
+    system.addComponent(
+        TestComponentTwo,
+        @constCast(&[_]Entity{0}),
+        @constCast(&[_]TestComponentTwo{.{ .field_three = 3, .field_four = 4 }}),
+    ) catch unreachable;
+
+    // If we query again but with both components we should be getting the same entity as well
+    var combo_query_result = system.getQueryResult(.{ TestComponentOne, TestComponentTwo }) catch unreachable;
+    defer combo_query_result.deinit();
+    std.debug.print("combo_query_result len: {d}\n", .{combo_query_result.archetypes.len});
+    std.debug.print("arch components map len: {d}\n", .{combo_query_result.archetypes[0].components_map.count()});
+
+    while (combo_query_result.next()) |res| {
+        const column_one = res.getColumn(TestComponentOne);
+        const column_two = res.getColumn(TestComponentTwo);
+
+        std.debug.assert(column_one != null);
+        std.debug.assert(column_two != null);
+    }
 }

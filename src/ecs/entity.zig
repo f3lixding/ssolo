@@ -35,6 +35,7 @@ pub const Archetype = struct {
         var key_iter = entity_bundle.components.keyIterator();
         var idx: usize = 0;
         while (key_iter.next()) |key| : (idx += 1) {
+            std.debug.print("idx: {d}, key: {d}\n", .{ idx, key.* });
             component_ids[idx] = key.*;
         }
 
@@ -58,7 +59,7 @@ pub const Archetype = struct {
         return .{
             .alloc = alloc,
             .signature = sig: {
-                const sig = ArchetypeSignature.init(alloc, &component_ids) catch |e| {
+                const sig = ArchetypeSignature.init(alloc, component_ids[0..idx]) catch |e| {
                     err = e;
                     return e;
                 };
@@ -244,7 +245,7 @@ pub const Archetype = struct {
 
     pub fn getColumn(self: Self, comptime T: type) ?[]T {
         const component_id = ComponentId(T);
-        const components_in_bytes = self.components_map.get(component_id).?;
+        const components_in_bytes = self.components_map.get(component_id) orelse return null;
         const with_alignment_one = std.mem.bytesAsSlice(T, components_in_bytes.items);
 
         return @alignCast(with_alignment_one);
@@ -274,13 +275,21 @@ pub const ArchetypeSignature = struct {
     /// is a superset of the signatgure being queried
     /// This is because it is often the case to query for a subset
     pub fn matches(self: Self, query_components: []const u32) bool {
-        for (0..query_components.len) |i| {
-            if (self.component_ids[i] != query_components[i]) {
+        // TODO: This is wrong. If query_components have component ids that changes
+        // the sorted order of the ids that are in src_comp, it creates a false negative
+        for (self.component_ids, 0..self.component_ids.len) |src_comp, i| {
+            if (src_comp != query_components[i]) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    pub fn matches_absolute(self: Self, query_components: []const u32) bool {
+        if (self.component_ids.len != query_components.len) return false;
+
+        return self.matches(query_components);
     }
 };
 
