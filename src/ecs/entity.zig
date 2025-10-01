@@ -43,8 +43,8 @@ pub const Archetype = struct {
         var iter = entity_bundle.components.iterator();
 
         while (iter.next()) |entry| {
-            var new_arr = std.ArrayList(u8).init(alloc);
-            new_arr.appendSlice(entry.value_ptr.items) catch |e| {
+            var new_arr = std.ArrayList(u8).empty;
+            new_arr.appendSlice(alloc, entry.value_ptr.items) catch |e| {
                 err = e;
                 return e;
             };
@@ -66,8 +66,8 @@ pub const Archetype = struct {
             },
             .components_map = new_map,
             .entities = entity: {
-                var entity_list = std.ArrayList(Entity).init(alloc);
-                entity_list.append(entity_bundle.entity_id) catch |e| {
+                var entity_list = std.ArrayList(Entity).empty;
+                entity_list.append(alloc, entity_bundle.entity_id) catch |e| {
                     err = e;
                     return e;
                 };
@@ -107,7 +107,7 @@ pub const Archetype = struct {
         const components_map = map: {
             var components_map = ComponentsMap.init(alloc);
             for (signature.component_ids) |id| {
-                try components_map.put(id, std.ArrayList(u8).init(alloc));
+                try components_map.put(id, std.ArrayList(u8).empty);
             }
             break :map components_map;
         };
@@ -115,7 +115,7 @@ pub const Archetype = struct {
         return .{
             .alloc = alloc,
             .components_map = components_map,
-            .entities = std.ArrayList(Entity).init(alloc),
+            .entities = std.ArrayList(Entity).empty,
             .signature = signature,
             .component_sizes = component_sizes,
         };
@@ -124,11 +124,11 @@ pub const Archetype = struct {
     pub fn deinit(self: *Self) void {
         var component_value_iter = self.components_map.valueIterator();
         while (component_value_iter.next()) |bytes| {
-            bytes.deinit();
+            bytes.deinit(self.alloc);
         }
 
         self.components_map.deinit();
-        self.entities.deinit();
+        self.entities.deinit(self.alloc);
         self.signature.deinit();
         self.component_sizes.deinit();
     }
@@ -157,11 +157,11 @@ pub const Archetype = struct {
         inline for (type_info.@"struct".fields) |field| {
             const component_id: u32 = ComponentId(field.type);
             const value = @field(components, field.name);
-            var entry = try self.components_map.getOrPutValue(component_id, std.ArrayList(u8).init(self.alloc));
-            try entry.value_ptr.appendSlice(std.mem.asBytes(&value));
+            var entry = try self.components_map.getOrPutValue(component_id, std.ArrayList(u8).empty);
+            try entry.value_ptr.appendSlice(self.alloc, std.mem.asBytes(&value));
         }
 
-        try self.entities.append(entity_id);
+        try self.entities.append(self.alloc, entity_id);
         self.entities_idx += 1;
     }
 
@@ -186,11 +186,11 @@ pub const Archetype = struct {
                 const component_size = self.component_sizes.get(key) orelse @panic("component id not found in component sizes");
                 break :blk (component_size == value.items.len);
             });
-            try corresponding_row.appendSlice(value.items);
+            try corresponding_row.appendSlice(self.alloc, value.items);
         }
 
         self.entities_idx += 1;
-        try self.entities.append(entity_bundle.entity_id);
+        try self.entities.append(self.alloc, entity_bundle.entity_id);
     }
 
     pub fn removeEntity(self: *Self, to_remove: Entity) EntityError!EntityBundle {
@@ -218,8 +218,8 @@ pub const Archetype = struct {
             const last_element_start = last_element_idx * component_size;
 
             // Put the deleted elements in the sink
-            const byte_arr = try sink.components.getOrPutValue(component_id, std.ArrayList(u8).init(self.alloc));
-            try byte_arr.value_ptr.appendSlice(components.items[element_to_remove_start .. element_to_remove_start + component_size]);
+            const byte_arr = try sink.components.getOrPutValue(component_id, std.ArrayList(u8).empty);
+            try byte_arr.value_ptr.appendSlice(self.alloc, components.items[element_to_remove_start .. element_to_remove_start + component_size]);
 
             // Only swap if we're not removing the last element
             if (idx != last_element_idx) {
@@ -315,7 +315,7 @@ pub const EntityBundle = struct {
         var iter = self.components.valueIterator();
 
         while (iter.next()) |byte_array| {
-            byte_array.deinit();
+            byte_array.deinit(self.alloc);
         }
 
         self.components.deinit();
@@ -325,7 +325,7 @@ pub const EntityBundle = struct {
         const component_id = ComponentId(@TypeOf(component));
         const component_as_bytes = std.mem.asBytes(&component);
 
-        var arr = try self.components.getOrPutValue(component_id, std.ArrayList(u8).init(self.alloc));
-        try arr.value_ptr.appendSlice(component_as_bytes);
+        var arr = try self.components.getOrPutValue(component_id, std.ArrayList(u8).empty);
+        try arr.value_ptr.appendSlice(self.alloc, component_as_bytes);
     }
 };

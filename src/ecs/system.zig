@@ -193,17 +193,17 @@ pub fn System(
                 break :ids field_ids;
             };
 
-            var matching_arches = std.ArrayList(*Archetype).init(self.alloc);
+            var matching_arches = std.ArrayList(*Archetype).empty;
 
             for (0..self.arch_idx) |i| {
                 var arch = &self.archetypes[i];
                 if (arch.signature.matches_absolute(&component_ids)) {
-                    try matching_arches.append(arch);
+                    try matching_arches.append(self.alloc, arch);
                 }
             }
 
             return .{
-                .archetypes = try matching_arches.toOwnedSlice(),
+                .archetypes = try matching_arches.toOwnedSlice(self.alloc),
                 .alloc = self.alloc,
             };
         }
