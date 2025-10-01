@@ -124,12 +124,12 @@ test "achetype init and add with component byte arrays" {
         const comp_one_as_bytes = std.mem.asBytes(&test_comp_one);
         const comp_two_as_bytes = std.mem.asBytes(&test_comp_two);
 
-        var comp_one_arr = std.ArrayList(u8).init(std.testing.allocator);
-        try comp_one_arr.appendSlice(comp_one_as_bytes);
-        var comp_two_arr = std.ArrayList(u8).init(std.testing.allocator);
-        try comp_two_arr.appendSlice(comp_two_as_bytes);
+        var comp_one_arr = std.ArrayList(u8).empty;
+        try comp_one_arr.appendSlice(alloc, comp_one_as_bytes);
+        var comp_two_arr = std.ArrayList(u8).empty;
+        try comp_two_arr.appendSlice(alloc, comp_two_as_bytes);
 
-        var bundle = try EntityBundle.init(std.testing.allocator, entity_id);
+        var bundle = try EntityBundle.init(alloc, entity_id);
         try bundle.components.put(ComponentId(@TypeOf(test_comp_one)), comp_one_arr);
         try bundle.components.put(ComponentId(@TypeOf(test_comp_two)), comp_two_arr);
 

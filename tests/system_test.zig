@@ -22,7 +22,7 @@ const TestComponentTwo = struct {
 };
 
 test "system init" {
-    var system = ecs.System(10, &[_]ecs.RenderContext{
+    _ = ecs.System(10, &[_]ecs.RenderContext{
         .{
             .get_pip_fn_ptr = struct {
                 pub fn get_pip() sg.Pipeline {
@@ -36,10 +36,6 @@ test "system init" {
             }.get_sampler,
         },
     }).init(alloc) catch unreachable;
-
-    system.init(std.testing.allocator) catch |e| {
-        std.debug.panic("Init errored: {any}\n", .{e});
-    };
 }
 
 test "system add component" {
