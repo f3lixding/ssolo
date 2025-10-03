@@ -13,6 +13,7 @@ pub const FlyingVelocity = struct { value: f32 };
 pub const AttackDamage = struct { value: u32 };
 pub const RateOfAttack = struct { value: u32 };
 pub const Renderable = struct {
+    world_level_id: usize,
     skeleton: *spc.spSkeleton,
     animation_state: *spc.spAnimationState,
     vertex_buffer: sg.Buffer,

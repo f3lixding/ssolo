@@ -12,6 +12,7 @@ const RenderContext = @import("root.zig").RenderContext;
 const comp = @import("components.zig");
 const ComponentId = comp.ComponentId;
 const Renderable = comp.Renderable;
+const util = @import("../util.zig");
 
 pub const SystemError = error{
     InitError,
@@ -43,6 +44,7 @@ pub fn System(
         alloc: std.mem.Allocator = undefined,
         pips: [render_ctxs.len]sg.Pipeline = undefined,
         samplers: [render_ctxs.len]sg.Sampler = undefined,
+        views: [render_ctxs.len]sg.View = undefined,
 
         // Data associated with ECS management
         archetypes: [max_archetypes]Archetype = undefined,
@@ -59,6 +61,7 @@ pub fn System(
             inline for (render_ctxs, 0..) |ctx, i| {
                 self.pips[i] = ctx.get_pip_fn_ptr();
                 self.samplers[i] = ctx.get_sampler_fn_ptr();
+                self.views[i] = ctx.get_view_fn_ptr();
             }
 
             return self;
@@ -159,9 +162,10 @@ pub fn System(
             //   has the Renderable component
             // - Sort them based on their rendering order
             // - Loop through the query results and call update and then render
-            const comps = self.query(Renderable) orelse return SystemError.EntityNotFound;
-            defer self.alloc.free(comps);
-            std.mem.sort(Renderable, comps, {}, struct {
+            const query_res = try self.getQueryResult(.{Renderable});
+            defer query_res.deinit();
+
+            std.mem.sort(Renderable, query_res, {}, struct {
                 fn lessThan(context: void, a: Renderable, b: Renderable) bool {
                     _ = context;
                     // Here we are assuming everything that's renderable has a skeleton
@@ -171,11 +175,20 @@ pub fn System(
                 }
             }.lessThan);
 
-            for (comps) |component| {
-                _ = component;
+            while (query_res.next()) |arch| {
+                const maybe_comps = arch.getColumn(Renderable);
+                if (maybe_comps) |comps| {
+                    for (comps) |*renderable| {
+                        const idx = renderable.world_level_id;
+
+                        util.updateComponent(renderable);
+                        util.renderComponent(renderable, self.pips[idx], self.samplers[idx], self.views[idx]);
+                    }
+                }
             }
         }
 
+        /// The ComponentTuple here is always contained in an tuple
         pub fn getQueryResult(self: *Self, comptime ComponentTuple: anytype) !QueryResult {
             const component_ids = comptime ids: {
                 const info = @typeInfo(@TypeOf(ComponentTuple));

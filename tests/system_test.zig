@@ -10,6 +10,7 @@ const Archetype = ecs.Archetype;
 const AchetypeSignature = ecs.ArchetypeSignature;
 const ComponentId = ecs.ComponentId;
 const Renderable = @import("../src/ecs/components.zig").Renderable;
+const util = @import("../src/util.zig");
 
 const TestComponentOne = struct {
     field_one: u32,
@@ -21,9 +22,14 @@ const TestComponentTwo = struct {
     field_four: u32,
 };
 
-test "system init" {
-    _ = ecs.System(10, &[_]ecs.RenderContext{
-        .{
+fn getTestSystem() type {
+    const test_ctx =
+        ecs.RenderContext{
+            .init = struct {
+                pub fn init(self: *ecs.RenderContext) !void {
+                    _ = self;
+                }
+            }.init,
             .get_pip_fn_ptr = struct {
                 pub fn get_pip() sg.Pipeline {
                     return sg.Pipeline{};
@@ -34,25 +40,23 @@ test "system init" {
                     return sg.Sampler{};
                 }
             }.get_sampler,
-        },
-    }).init(alloc) catch unreachable;
+            .get_view_fn_ptr = struct {
+                pub fn get_view() sg.View {
+                    return sg.View{};
+                }
+            }.get_view,
+        };
+
+    return ecs.System(10, &[_]ecs.RenderContext{test_ctx});
+}
+
+test "system init" {
+    const System = getTestSystem();
+    _ = System.init(alloc) catch unreachable;
 }
 
 test "system add component" {
-    var system = ecs.System(10, &[_]ecs.RenderContext{
-        .{
-            .get_pip_fn_ptr = struct {
-                pub fn get_pip() sg.Pipeline {
-                    return sg.Pipeline{};
-                }
-            }.get_pip,
-            .get_sampler_fn_ptr = struct {
-                pub fn get_sampler() sg.Sampler {
-                    return sg.Sampler{};
-                }
-            }.get_sampler,
-        },
-    }).init(alloc) catch unreachable;
+    var system = getTestSystem().init(alloc) catch unreachable;
     defer system.deinit();
 
     const component_types = .{TestComponentOne};
@@ -91,20 +95,7 @@ test "system add component" {
 }
 
 test "system query" {
-    var system = ecs.System(10, &[_]ecs.RenderContext{
-        .{
-            .get_pip_fn_ptr = struct {
-                pub fn get_pip() sg.Pipeline {
-                    return sg.Pipeline{};
-                }
-            }.get_pip,
-            .get_sampler_fn_ptr = struct {
-                pub fn get_sampler() sg.Sampler {
-                    return sg.Sampler{};
-                }
-            }.get_sampler,
-        },
-    }).init(alloc) catch unreachable;
+    var system = getTestSystem().init(alloc) catch unreachable;
     defer system.deinit();
 
     // Set up by inserting into the system components

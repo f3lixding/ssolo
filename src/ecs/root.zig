@@ -48,8 +48,12 @@ pub const ComponentId = @import("components.zig").ComponentId;
 pub const AllComponentCombinations = @import("components.zig").AllComponentCombinations;
 
 const sg = @import("sokol").gfx;
+const InitBundle = @import("../util.zig").InitBundle;
 
 pub const RenderContext = struct {
+    init_bundle: InitBundle = undefined,
+    init: *const fn (*RenderContext) anyerror!void,
     get_pip_fn_ptr: *const fn () sg.Pipeline,
     get_sampler_fn_ptr: *const fn () sg.Sampler,
+    get_view_fn_ptr: *const fn () sg.View,
 };

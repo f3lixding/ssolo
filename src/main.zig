@@ -14,6 +14,7 @@ const Aliens = @import("objects/Aliens.zig");
 const Cursor = @import("Cursor.zig");
 const SettingsMenu = @import("menus/SettingsMenu.zig");
 const Widget = @import("menus/widget.zig").Widget;
+const ecs = @import("ecs/root.zig");
 
 const pda = @import("pda");
 
@@ -22,6 +23,7 @@ pub const WINDOW_HEIGHT: i32 = 600;
 const SAMPLE_COUNT: i32 = 4;
 const WINDOW_TITLE: []const u8 = "ssolo";
 
+// This needs to be included here otherwise the static analysis would fail for undefined symbols
 comptime {
     _ = @import("spine_c_impl.zig");
 }
@@ -32,6 +34,88 @@ var renderables: [100]Renderable = undefined;
 var ren_idx: usize = 0;
 var allocator: std.mem.Allocator = undefined;
 var IS_IN_MENU: bool = false;
+
+// TODO: move this to a more purposeful place
+fn getSystem() type {
+    return ecs.System(10, &[_]ecs.RenderContext{
+        // Alien
+        .{
+            .get_pip_fn_ptr = struct {
+                pub fn getPip() sg.Pipeline {
+                    const shd = @import("shaders/alien_ess.glsl.zig");
+                    return sg.makePipeline(.{
+                        .shader = sg.makeShader(shd.alienEssShaderDesc(sg.queryBackend())),
+                        .layout = init: {
+                            var l = sg.VertexLayoutState{};
+                            l.attrs[shd.ATTR_alien_ess_pos].format = .FLOAT2;
+                            l.attrs[shd.ATTR_alien_ess_uv0].format = .FLOAT2;
+                            l.attrs[shd.ATTR_alien_ess_color0].format = .UBYTE4N;
+                            break :init l;
+                        },
+                        .index_type = .UINT16,
+                        .depth = .{
+                            .compare = .ALWAYS,
+                            .write_enabled = false,
+                        },
+                        .cull_mode = .NONE,
+                        .colors = init: {
+                            var colors: [4]sg.ColorTargetState = undefined;
+                            var color = sg.ColorTargetState{};
+                            color.blend = .{
+                                .enabled = true,
+                                .src_factor_rgb = .ONE,
+                                .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
+                                .src_factor_alpha = .ONE,
+                                .dst_factor_alpha = .ONE_MINUS_SRC_ALPHA,
+                            };
+                            colors[0] = color;
+                            break :init colors;
+                        },
+                    });
+                }
+            }.getPip,
+            .get_sampler_fn_ptr = struct {
+                pub fn getSampler() sg.Sampler {
+                    return sg.makeSampler(.{});
+                }
+            }.getSampler,
+            .get_view_fn_ptr = struct {
+                pub fn getView() sg.View {
+                    const sprite_sheet = sg.makeImage(.{
+                        .width = @intCast(image.width),
+                        .height = @intCast(image.height),
+                        .data = init: {
+                            var data = sg.ImageData{};
+                            data.mip_levels[0] = sg.asRange(image.pixels.rgba32);
+                            break :init data;
+                        },
+                    });
+                    return sg.makeView(.{
+                        .texture = .{ .image = self.sprite_sheet },
+                    });
+                }
+            }.getView,
+        },
+        // Menu
+        .{
+            .get_pip_fn_ptr = struct {
+                pub fn getPip() sg.Pipeline {
+                    return sg.Pipeline{};
+                }
+            }.getPip,
+            .get_sampler_fn_ptr = struct {
+                pub fn getSampler() sg.Sampler {
+                    return sg.Sampler{};
+                }
+            }.getSampler,
+            .get_view_fn_ptr = struct {
+                pub fn getView() sg.View {
+                    return sg.View{};
+                }
+            }.getView,
+        },
+    });
+}
 
 export fn init() void {
     sg.setup(.{
