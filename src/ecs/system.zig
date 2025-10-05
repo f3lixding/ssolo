@@ -13,6 +13,7 @@ const comp = @import("components.zig");
 const ComponentId = comp.ComponentId;
 const Renderable = comp.Renderable;
 const util = @import("../util.zig");
+const InitBundle = util.InitBundle;
 
 pub const SystemError = error{
     InitError,
@@ -45,6 +46,7 @@ pub fn System(
         pips: [render_ctxs.len]sg.Pipeline = undefined,
         samplers: [render_ctxs.len]sg.Sampler = undefined,
         views: [render_ctxs.len]sg.View = undefined,
+        init_bundle: [render_ctxs.len]InitBundle = undefined,
 
         // Data associated with ECS management
         archetypes: [max_archetypes]Archetype = undefined,
@@ -61,7 +63,8 @@ pub fn System(
             inline for (render_ctxs, 0..) |ctx, i| {
                 self.pips[i] = ctx.get_pip_fn_ptr();
                 self.samplers[i] = ctx.get_sampler_fn_ptr();
-                self.views[i] = ctx.get_view_fn_ptr();
+                self.views[i] = ctx.get_view_fn_ptr(alloc);
+                self.init_bundle[i] = ctx.get_init_bundle_fn_ptr() catch @panic("Failure when initializing bundle");
             }
 
             return self;
@@ -152,21 +155,33 @@ pub fn System(
 
         /// This is the function that processes the updates that are results of interactivity
         /// i.e. excluding updates of states that are related to spine c runtime
-        fn update(self: *Self) SystemError!void {
+        pub fn update(self: *Self) SystemError!void {
             _ = self;
         }
 
-        pub fn render(self: Self) !void {
+        pub fn render(self: *Self) !void {
             // The following need to be done here:
             // - We need to query everything in the database for entites that
             //   has the Renderable component
             // - Sort them based on their rendering order
             // - Loop through the query results and call update and then render
-            const query_res = try self.getQueryResult(.{Renderable});
+            var query_res = try self.getQueryResult(.{Renderable});
             defer query_res.deinit();
 
-            std.mem.sort(Renderable, query_res, {}, struct {
-                fn lessThan(context: void, a: Renderable, b: Renderable) bool {
+            var render_components: std.ArrayList(*Renderable) = .empty;
+            defer render_components.deinit(self.alloc);
+
+            while (query_res.next()) |arch| {
+                const maybe_comps = arch.getColumn(Renderable);
+                if (maybe_comps) |comps| {
+                    for (comps) |*renderable| {
+                        try render_components.append(self.alloc, renderable);
+                    }
+                }
+            }
+
+            std.mem.sort(*Renderable, render_components.items, {}, struct {
+                fn lessThan(context: void, a: *Renderable, b: *Renderable) bool {
                     _ = context;
                     // Here we are assuming everything that's renderable has a skeleton
                     // In the future, if we need to render things that are not related
@@ -175,16 +190,10 @@ pub fn System(
                 }
             }.lessThan);
 
-            while (query_res.next()) |arch| {
-                const maybe_comps = arch.getColumn(Renderable);
-                if (maybe_comps) |comps| {
-                    for (comps) |*renderable| {
-                        const idx = renderable.world_level_id;
-
-                        util.updateComponent(renderable);
-                        util.renderComponent(renderable, self.pips[idx], self.samplers[idx], self.views[idx]);
-                    }
-                }
+            for (render_components.items) |renderable| {
+                const idx = renderable.world_level_id;
+                util.updateComponent(renderable);
+                util.renderComponent(renderable.*, self.pips[idx], self.samplers[idx], self.views[idx]);
             }
         }
 

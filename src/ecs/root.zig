@@ -46,14 +46,15 @@ pub const Entity = @import("entity.zig").Entity;
 pub const EntityBundle = @import("entity.zig").EntityBundle;
 pub const ComponentId = @import("components.zig").ComponentId;
 pub const AllComponentCombinations = @import("components.zig").AllComponentCombinations;
+pub const components = @import("components.zig");
 
 const sg = @import("sokol").gfx;
 const InitBundle = @import("../util.zig").InitBundle;
+const std = @import("std");
 
 pub const RenderContext = struct {
-    init_bundle: InitBundle = undefined,
-    init: *const fn (*RenderContext) anyerror!void,
+    get_init_bundle_fn_ptr: *const fn () anyerror!InitBundle,
     get_pip_fn_ptr: *const fn () sg.Pipeline,
     get_sampler_fn_ptr: *const fn () sg.Sampler,
-    get_view_fn_ptr: *const fn () sg.View,
+    get_view_fn_ptr: *const fn (std.mem.Allocator) sg.View,
 };

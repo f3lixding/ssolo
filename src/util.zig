@@ -492,7 +492,7 @@ pub fn renderComponent(
     texture_view: sg.View,
 ) void {
     // Update vertex buffer
-    sg.updateBuffer(renderable.vertex_buffer, sg.asRange(renderable.vertex_buffer[0..renderable.total_vertex_count]));
+    sg.updateBuffer(renderable.vertex_buffer, sg.asRange(renderable.vertices[0..renderable.total_vertex_count]));
 
     var indices: [MAX_VERTICES_PER_ATTACHMENT]u16 = undefined;
     var index_count: usize = 0;

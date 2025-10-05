@@ -11,6 +11,7 @@ const AchetypeSignature = ecs.ArchetypeSignature;
 const ComponentId = ecs.ComponentId;
 const Renderable = @import("../src/ecs/components.zig").Renderable;
 const util = @import("../src/util.zig");
+const InitBundle = util.InitBundle;
 
 const TestComponentOne = struct {
     field_one: u32,
@@ -25,11 +26,16 @@ const TestComponentTwo = struct {
 fn getTestSystem() type {
     const test_ctx =
         ecs.RenderContext{
-            .init = struct {
-                pub fn init(self: *ecs.RenderContext) !void {
-                    _ = self;
+            .get_init_bundle_fn_ptr = struct {
+                pub fn getInitBundle() !InitBundle {
+                    // These are dangling pointers
+                    // DO NOT try to use them for any of tests
+                    return .{
+                        .animation_state_data = @constCast(@as(*const spc.spAnimationStateData, &.{})),
+                        .skeleton_data = @constCast(@as(*const spc.spSkeletonData, &.{})),
+                    };
                 }
-            }.init,
+            }.getInitBundle,
             .get_pip_fn_ptr = struct {
                 pub fn get_pip() sg.Pipeline {
                     return sg.Pipeline{};

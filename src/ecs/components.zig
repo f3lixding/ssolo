@@ -18,9 +18,9 @@ pub const Renderable = struct {
     animation_state: *spc.spAnimationState,
     vertex_buffer: sg.Buffer,
     index_buffer: sg.Buffer,
-    vertices: [MAX_VERTICES_PER_ATTACHMENT]Vertex,
-    total_vertex_count: usize,
-    world_vertices_pos: [MAX_VERTICES_PER_ATTACHMENT]f32,
+    vertices: [MAX_VERTICES_PER_ATTACHMENT]Vertex = undefined,
+    total_vertex_count: usize = 0,
+    world_vertices_pos: [MAX_VERTICES_PER_ATTACHMENT]f32 = undefined,
 };
 
 pub fn ComponentId(comptime ComponentType: type) u32 {

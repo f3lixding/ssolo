@@ -7,14 +7,17 @@ const slog = sokol.log;
 const sglue = sokol.glue;
 const Allocator = std.mem.Allocator;
 const util = @import("util.zig");
-const spinec_c = util.spine_c;
+const spc = util.spine_c;
+const zigimg = @import("zigimg");
 
 const Renderable = @import("Renderable.zig");
 const Aliens = @import("objects/Aliens.zig");
 const Cursor = @import("Cursor.zig");
 const SettingsMenu = @import("menus/SettingsMenu.zig");
 const Widget = @import("menus/widget.zig").Widget;
+const InitBundle = util.InitBundle;
 const ecs = @import("ecs/root.zig");
+const assets = @import("assets");
 
 const pda = @import("pda");
 
@@ -35,11 +38,23 @@ var ren_idx: usize = 0;
 var allocator: std.mem.Allocator = undefined;
 var IS_IN_MENU: bool = false;
 
+var system: getSystem() = undefined;
+
 // TODO: move this to a more purposeful place
 fn getSystem() type {
+    const ALIEN_ASSET_FILE_STEM: []const u8 = "alien_ess";
     return ecs.System(10, &[_]ecs.RenderContext{
         // Alien
         .{
+            .get_init_bundle_fn_ptr = struct {
+                pub fn getInitBundle() !InitBundle {
+                    return try util.getInitBundle(
+                        ALIEN_ASSET_FILE_STEM,
+                        0.5,
+                        0.2,
+                    );
+                }
+            }.getInitBundle,
             .get_pip_fn_ptr = struct {
                 pub fn getPip() sg.Pipeline {
                     const shd = @import("shaders/alien_ess.glsl.zig");
@@ -80,7 +95,12 @@ fn getSystem() type {
                 }
             }.getSampler,
             .get_view_fn_ptr = struct {
-                pub fn getView() sg.View {
+                pub fn getView(alloc: std.mem.Allocator) sg.View {
+                    const image_buffer = comptime blk: {
+                        break :blk @field(assets, std.fmt.comptimePrint("{s}_png", .{ALIEN_ASSET_FILE_STEM}));
+                    };
+                    var image = zigimg.Image.fromMemory(alloc, image_buffer) catch @panic("Error reading image from memory");
+                    defer image.deinit(alloc);
                     const sprite_sheet = sg.makeImage(.{
                         .width = @intCast(image.width),
                         .height = @intCast(image.height),
@@ -91,26 +111,8 @@ fn getSystem() type {
                         },
                     });
                     return sg.makeView(.{
-                        .texture = .{ .image = self.sprite_sheet },
+                        .texture = .{ .image = sprite_sheet },
                     });
-                }
-            }.getView,
-        },
-        // Menu
-        .{
-            .get_pip_fn_ptr = struct {
-                pub fn getPip() sg.Pipeline {
-                    return sg.Pipeline{};
-                }
-            }.getPip,
-            .get_sampler_fn_ptr = struct {
-                pub fn getSampler() sg.Sampler {
-                    return sg.Sampler{};
-                }
-            }.getSampler,
-            .get_view_fn_ptr = struct {
-                pub fn getView() sg.View {
-                    return sg.View{};
                 }
             }.getView,
         },
@@ -133,74 +135,57 @@ export fn init() void {
     else
         gpa.allocator();
 
-    const aliens = allocator.create(Aliens) catch |e| {
-        std.log.err("Error creating aliens {any}", .{e});
+    system = getSystem().init(allocator) catch |e| {
+        std.log.err("Error initializing system: {any}", .{e});
         unreachable;
     };
-    aliens.* = Aliens{};
-    renderables[ren_idx] = Renderable.init(aliens) catch |e| {
-        std.log.err("Error erasing type {any}", .{e});
-        unreachable;
-    };
-    ren_idx += 1;
 
-    // menu
-    const WrappedMenu = Widget(.{
-        .CoreType = SettingsMenu,
-    });
-    const wrapped_menu = allocator.create(WrappedMenu) catch |e| {
-        std.log.err("Error creating menu {any}", .{e});
-        unreachable;
-    };
-    wrapped_menu.* = WrappedMenu{
-        .alloc = allocator,
-        .core = SettingsMenu{},
-    };
-    renderables[ren_idx] = Renderable.init(wrapped_menu) catch |e| {
-        std.log.err("Error erasing type {any}", .{e});
-        unreachable;
-    };
-    ren_idx += 1;
+    // this is just for testing
+    // TODO: abstract this in a method on the system
+    {
+        const RenderableComponent = ecs.components.Renderable;
+        const world_level_id: usize = 0;
+        var entity_bundle = ecs.EntityBundle.init(allocator, 0) catch unreachable;
+        const init_bundle = &system.init_bundle[world_level_id];
+        const skeleton_data = init_bundle.skeleton_data;
+        const animation_state_data = init_bundle.animation_state_data;
 
-    // cursor
-    const cursor = allocator.create(Cursor) catch |e| {
-        std.log.err("Error creating cursor {any}", .{e});
-        unreachable;
-    };
-    cursor.* = Cursor{};
-    renderables[ren_idx] = Renderable.init(cursor) catch |e| {
-        std.log.err("Error erasing type {any}", .{e});
-        unreachable;
-    };
-    ren_idx += 1;
+        const skeleton = spc.spSkeleton_create(skeleton_data);
+        const animation = spc.spSkeletonData_findAnimation(skeleton_data, "hit");
+        const state = spc.spAnimationState_create(animation_state_data);
+        _ = spc.spAnimationState_setAnimation(state, 0, animation, 0);
 
-    for (0..ren_idx) |i| {
-        renderables[i].initInner(allocator) catch unreachable;
+        const render_component = RenderableComponent{
+            .world_level_id = 0,
+            .skeleton = skeleton,
+            .animation_state = state,
+            .vertex_buffer = sg.makeBuffer(.{
+                .usage = .{ .dynamic_update = true },
+                .size = util.MAX_VERTICES_PER_ATTACHMENT * @sizeOf(util.Vertex),
+            }),
+            .index_buffer = sg.makeBuffer(.{
+                .usage = .{ .index_buffer = true, .dynamic_update = true },
+                .size = util.MAX_VERTICES_PER_ATTACHMENT * @sizeOf(u16),
+            }),
+        };
+        entity_bundle.addComponent(render_component) catch unreachable;
+
+        const arch = ecs.Archetype.initWithEntityBundle(allocator, &entity_bundle) catch unreachable;
+        system.addArchetype(arch) catch unreachable;
     }
 
     sapp.showMouse(false);
     sapp.lockMouse(true);
-
-    // adding another one just for funzies
-    aliens.add_instance(50.0, 50.0) catch |e| {
-        std.log.err("Error adding another instance: {any}", .{e});
-        unreachable;
-    };
 }
 
 export fn frame() void {
     sg.beginPass(.{ .action = pass_action, .swapchain = sglue.swapchain() });
     const time_elapsed = sapp.frameDuration();
-    for (0..ren_idx) |i| {
-        renderables[i].update(@floatCast(time_elapsed)) catch |e| {
-            std.log.err("Error updating renderable: {any}", .{e});
-            unreachable;
-        };
-        renderables[i].render() catch |e| {
-            std.log.err("Error rendering renderable: {any}", .{e});
-            unreachable;
-        };
-    }
+    _ = time_elapsed;
+
+    system.update() catch unreachable;
+    system.render() catch unreachable;
+
     sg.endPass();
     sg.commit();
 }

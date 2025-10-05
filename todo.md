@@ -3,8 +3,10 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 
 ## TODO
 - [ ] Rewrite in ECS(?). Right now the interfaces isn't all that typical of a game engine. 
-    - [ ] Structure RenderCtx
+    - [x] Structure RenderCtx
+    - [ ] Add instance method (this is likely a combination of query + add to archetype queried)
     - [ ] Implement render in ECS System
+    - [ ] Render method on system
 - [ ] Render text on menu screens 
 - [ ] Different screens / mode (Menu screen)
 - [ ] Share states between cursor and menu screen (or any other components since cursor position is probably going to be used by everything)

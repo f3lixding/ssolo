@@ -321,6 +321,7 @@ pub const EntityBundle = struct {
         self.components.deinit();
     }
 
+    /// component here is the actual component (as opposed to a tuple that contains the component)
     pub fn addComponent(self: *Self, component: anytype) !void {
         const component_id = ComponentId(@TypeOf(component));
         const component_as_bytes = std.mem.asBytes(&component);
