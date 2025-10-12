@@ -168,7 +168,12 @@ export fn init() void {
                 .size = util.MAX_VERTICES_PER_ATTACHMENT * @sizeOf(u16),
             }),
         };
+        const player_controlled: ecs.components.PlayerControlled = .{};
+        const movement_speed: ecs.components.MovementSpeed = .{ .speed_per_second = 20.0 };
+
         entity_bundle.addComponent(render_component) catch unreachable;
+        entity_bundle.addComponent(player_controlled) catch unreachable;
+        entity_bundle.addComponent(movement_speed) catch unreachable;
 
         const arch = ecs.Archetype.initWithEntityBundle(allocator, &entity_bundle) catch unreachable;
         system.addArchetype(arch) catch unreachable;

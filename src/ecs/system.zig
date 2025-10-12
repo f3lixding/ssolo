@@ -12,6 +12,9 @@ const RenderContext = @import("root.zig").RenderContext;
 const comp = @import("components.zig");
 const ComponentId = comp.ComponentId;
 const Renderable = comp.Renderable;
+const PlayerControlled = comp.PlayerControlled;
+const MovementSpeed = comp.MovementSpeed;
+
 const util = @import("../util.zig");
 const InitBundle = util.InitBundle;
 
@@ -60,6 +63,9 @@ pub fn System(
                 .entity_locations = EntityLocationsMap.init(alloc),
             };
 
+            // TODO: right now we are making the erroneous assumption that every world level resource
+            // has to do with rendering and thus would have these functions implemented
+            // We need to make implementing these functions optional
             inline for (render_ctxs, 0..) |ctx, i| {
                 self.pips[i] = ctx.get_pip_fn_ptr();
                 self.samplers[i] = ctx.get_sampler_fn_ptr();
@@ -165,7 +171,7 @@ pub fn System(
             //   has the Renderable component
             // - Sort them based on their rendering order
             // - Loop through the query results and call update and then render
-            var query_res = try self.getQueryResult(.{Renderable});
+            var query_res = try self.getQueryResultPartial(.{Renderable});
             defer query_res.deinit();
 
             var render_components: std.ArrayList(*Renderable) = .empty;
@@ -197,8 +203,10 @@ pub fn System(
             }
         }
 
+        /// This queries for archetypes that has the exact same signature as that of the input component tuple
+        /// i.e. there should be no more than one archetype in the query result
         /// The ComponentTuple here is always contained in an tuple
-        pub fn getQueryResult(self: *Self, comptime ComponentTuple: anytype) !QueryResult {
+        pub fn getQueryResultAbsolute(self: *Self, comptime ComponentTuple: anytype) !QueryResult {
             const component_ids = comptime ids: {
                 const info = @typeInfo(@TypeOf(ComponentTuple));
                 if (info != .@"struct") @compileError("Component tuple needs to be a struct");
@@ -220,6 +228,41 @@ pub fn System(
             for (0..self.arch_idx) |i| {
                 var arch = &self.archetypes[i];
                 if (arch.signature.matches_absolute(&component_ids)) {
+                    try matching_arches.append(self.alloc, arch);
+                }
+            }
+
+            return .{
+                .archetypes = try matching_arches.toOwnedSlice(self.alloc),
+                .alloc = self.alloc,
+            };
+        }
+
+        /// This queries for archetypes that contains components in the input component tuple
+        /// i.e. the archetypes returned can contain more components than the input
+        /// The ComponentTuple here is always contained in an tuple
+        pub fn getQueryResultPartial(self: *Self, comptime ComponentTuple: anytype) !QueryResult {
+            const component_ids = comptime ids: {
+                const info = @typeInfo(@TypeOf(ComponentTuple));
+                if (info != .@"struct") @compileError("Component tuple needs to be a struct");
+
+                const fields = info.@"struct".fields;
+                // because this is in comptime scope we don't really need to heap allocate this
+                var field_ids: [fields.len]u32 = undefined;
+                for (fields, 0..) |field, i| {
+                    const field_type = @field(ComponentTuple, field.name);
+                    field_ids[i] = ComponentId(field_type);
+                }
+                std.mem.sort(u32, &field_ids, {}, std.sort.asc(u32));
+
+                break :ids field_ids;
+            };
+
+            var matching_arches = std.ArrayList(*Archetype).empty;
+
+            for (0..self.arch_idx) |i| {
+                var arch = &self.archetypes[i];
+                if (arch.signature.matches(&component_ids)) {
                     try matching_arches.append(self.alloc, arch);
                 }
             }

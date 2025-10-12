@@ -274,12 +274,12 @@ pub const ArchetypeSignature = struct {
     /// is a superset of the signatgure being queried
     /// This is because it is often the case to query for a subset
     pub fn matches(self: Self, query_components: []const u32) bool {
-        // TODO: This is wrong. If query_components have component ids that changes
-        // the sorted order of the ids that are in src_comp, it creates a false negative
-        for (self.component_ids, 0..self.component_ids.len) |src_comp, i| {
-            if (src_comp != query_components[i]) {
-                return false;
-            }
+        for (query_components) |id_to_find| {
+            const found = for (self.component_ids) |self_id| {
+                if (self_id == id_to_find) break true;
+            } else false;
+
+            if (found) continue else return false;
         }
 
         return true;

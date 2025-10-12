@@ -7,11 +7,7 @@ const Vertex = util.Vertex;
 const MAX_VERTICES_PER_ATTACHMENT = util.MAX_VERTICES_PER_ATTACHMENT;
 
 pub const Position = struct { x: f32, y: f32 };
-pub const Health = struct { value: u32 };
-pub const WalkingVelocity = struct { value: f32 };
-pub const FlyingVelocity = struct { value: f32 };
-pub const AttackDamage = struct { value: u32 };
-pub const RateOfAttack = struct { value: u32 };
+
 pub const Renderable = struct {
     world_level_id: usize,
     skeleton: *spc.spSkeleton,
@@ -21,6 +17,14 @@ pub const Renderable = struct {
     vertices: [MAX_VERTICES_PER_ATTACHMENT]Vertex = undefined,
     total_vertex_count: usize = 0,
     world_vertices_pos: [MAX_VERTICES_PER_ATTACHMENT]f32 = undefined,
+};
+
+pub const PlayerControlled = struct {
+    is_enabled: bool = true,
+};
+
+pub const MovementSpeed = struct {
+    speed_per_second: f32,
 };
 
 pub fn ComponentId(comptime ComponentType: type) u32 {

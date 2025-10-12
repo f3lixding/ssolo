@@ -116,7 +116,7 @@ test "system query" {
     system.addArchetype(arch) catch unreachable;
 
     // query
-    var query_result = system.getQueryResult(.{TestComponentOne}) catch unreachable;
+    var query_result = system.getQueryResultAbsolute(.{TestComponentOne}) catch unreachable;
     defer query_result.deinit();
 
     while (query_result.next()) |res| {
@@ -132,7 +132,7 @@ test "system query" {
     ) catch unreachable;
 
     // If we query again but with both components we should be getting the same entity as well
-    var combo_query_result = system.getQueryResult(.{ TestComponentOne, TestComponentTwo }) catch unreachable;
+    var combo_query_result = system.getQueryResultAbsolute(.{ TestComponentOne, TestComponentTwo }) catch unreachable;
     defer combo_query_result.deinit();
 
     while (combo_query_result.next()) |res| {
