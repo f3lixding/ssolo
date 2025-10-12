@@ -213,7 +213,7 @@ pub fn main() !void {
         .init_cb = init,
         .frame_cb = frame,
         .cleanup_cb = cleanup,
-        .event_cb = util.makeGlobalUserInputHandler(&renderables[0..100], &ren_idx),
+        .event_cb = util.makeGlobalUserInputHandler(&system),
         .width = WINDOW_WIDTH,
         .height = WINDOW_HEIGHT,
         .sample_count = SAMPLE_COUNT,

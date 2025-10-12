@@ -1,5 +1,6 @@
 const std = @import("std");
-const sg = @import("sokol").gfx;
+const sokol = @import("sokol");
+const sg = sokol.gfx;
 
 const et = @import("entity.zig");
 const Entity = et.Entity;
@@ -85,7 +86,6 @@ pub fn System(
             // TODO: deinit other fields
         }
 
-        // For testing only
         pub fn addArchetype(self: *Self, arch: Archetype) SystemError!void {
             self.archetypes[self.arch_idx] = arch;
 
@@ -271,6 +271,11 @@ pub fn System(
                 .archetypes = try matching_arches.toOwnedSlice(self.alloc),
                 .alloc = self.alloc,
             };
+        }
+
+        pub fn handleUserInput(self: *Self, event: [*c]const sokol.app.Event) void {
+            _ = self;
+            _ = event;
         }
     };
 }

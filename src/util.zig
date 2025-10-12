@@ -616,18 +616,23 @@ pub fn render(
     sg.draw(0, @intCast(index_count), 1);
 }
 
-var cur_idx_ptr: *const usize = undefined;
-var captured_renderables: *const []Renderable = undefined;
+var captured_system: *anyopaque = undefined;
 
-pub export fn makeGlobalUserInputHandler(renderables: *const []Renderable, cur_idx: *const usize) *const fn ([*c]const Event) callconv(.c) void {
-    cur_idx_ptr = cur_idx;
-    captured_renderables = renderables;
+pub fn makeGlobalUserInputHandler(system: anytype) *const fn ([*c]const Event) callconv(.c) void {
+    comptime {
+        const info = @typeInfo(@TypeOf(system));
+        if (info != .pointer) @compileError("System passed in needs to be of pointer type");
+        const T = info.pointer.child;
+        if (!@hasDecl(T, "handleUserInput")) @compileError("System passed in does not implement handle user input");
+    }
 
+    captured_system = system;
+
+    const SystemType = @TypeOf(system);
     const cb_struct = struct {
         pub export fn handleUserInput(event: [*c]const Event) void {
-            for (0..cur_idx_ptr.*) |i| {
-                captured_renderables.*[i].inputEventHandle(event) catch unreachable;
-            }
+            const sys: SystemType = @ptrCast(@alignCast(captured_system));
+            sys.handleUserInput(event);
         }
     };
 
