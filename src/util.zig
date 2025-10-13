@@ -4,11 +4,12 @@ const assert = std.debug.assert;
 const sg = @import("sokol").gfx;
 pub const shd = @import("shaders/alien_ess.glsl.zig");
 const assets = @import("assets");
-const Event = @import("sokol").app.Event;
-const Renderable = @import("Renderable.zig");
-const RenderableError = Renderable.RenderableError;
+const sapp = @import("sokol").app;
 
+const Event = sapp.Event;
 const RenderableComponent = @import("ecs/components.zig").Renderable;
+const MovementSpeed = @import("ecs/components.zig").MovementSpeed;
+const PlayerControlled = @import("ecs/components.zig").PlayerControlled;
 
 pub const spine_c = @cImport({
     @cInclude("spine/spine.h");
@@ -637,6 +638,56 @@ pub fn makeGlobalUserInputHandler(system: anytype) *const fn ([*c]const Event) c
     };
 
     return cb_struct.handleUserInput;
+}
+
+pub fn handleUserInput(
+    event: [*c]const Event,
+    renderable: *RenderableComponent,
+    movement_speed: *MovementSpeed,
+    player_controlled: *PlayerControlled,
+    bundle: []InitBundle,
+) void {
+    if (!player_controlled.is_enabled) return;
+
+    const evt = event.*;
+
+    // Only handle key events
+    if (evt.type != .KEY_DOWN and evt.type != .KEY_UP) return;
+
+    // Calculate movement delta based on frame time
+    const dt = sapp.frameDuration();
+    const move_delta = movement_speed.speed_per_second * @as(f32, @floatCast(dt));
+
+    // Handle key presses
+    if (evt.type == .KEY_DOWN) {
+        const world_level_id = renderable.world_level_id;
+        const skeleton_data = &bundle[world_level_id].skeleton_data;
+        const skeleton = renderable.skeleton;
+
+        switch (evt.key_code) {
+            .W, .UP => {
+                renderable.skeleton.y += move_delta;
+            },
+            .S, .DOWN => {
+                renderable.skeleton.y -= move_delta;
+            },
+            .A, .LEFT => {
+                const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
+                const state = renderable.animation_state;
+                _ = spine_c.spAnimationState_setAnimation(state, 0, animation, 0);
+                skeleton.scaleX = -1.0;
+                skeleton.x -= move_delta;
+            },
+            .D, .RIGHT => {
+                const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
+                const state = renderable.animation_state;
+                _ = spine_c.spAnimationState_setAnimation(state, 0, animation, 0);
+                skeleton.scaleX = 1.0;
+                skeleton.x += move_delta;
+            },
+            else => {},
+        }
+    }
 }
 
 test "mock test" {

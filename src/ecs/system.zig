@@ -15,6 +15,7 @@ const ComponentId = comp.ComponentId;
 const Renderable = comp.Renderable;
 const PlayerControlled = comp.PlayerControlled;
 const MovementSpeed = comp.MovementSpeed;
+const UserInputHandler = comp.UserInputHandler;
 
 const util = @import("../util.zig");
 const InitBundle = util.InitBundle;
@@ -273,9 +274,34 @@ pub fn System(
             };
         }
 
+        /// I don't think this function would ever need to be called by something that is not sokol
         pub fn handleUserInput(self: *Self, event: [*c]const sokol.app.Event) void {
-            _ = self;
-            _ = event;
+            // Query for all entities with UserInputHandler, Renderable, MovementSpeed, and PlayerControlled components
+            var query_res = self.getQueryResultPartial(.{
+                UserInputHandler,
+                Renderable,
+                MovementSpeed,
+                PlayerControlled,
+            }) catch {
+                std.log.err("Failed to query for input handler entities", .{});
+                return;
+            };
+            defer query_res.deinit();
+
+            // Iterate through matching archetypes
+            while (query_res.next()) |arch| {
+                // Get the component columns
+                const handlers = arch.getColumn(UserInputHandler) orelse continue;
+                const renderables = arch.getColumn(Renderable) orelse continue;
+                const movement_speeds = arch.getColumn(MovementSpeed) orelse continue;
+                const player_controlled_comps = arch.getColumn(PlayerControlled) orelse continue;
+
+                // Process each entity in this archetype
+                for (handlers, renderables, movement_speeds, player_controlled_comps) |*handler, *renderable, *movement_speed, *player_controlled| {
+                    // Call the handler function pointer with the event and component references
+                    handler.handle_event_fn_ptr(event, renderable, movement_speed, player_controlled, &self.init_bundle);
+                }
+            }
         }
     };
 }

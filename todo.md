@@ -7,6 +7,7 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
     - [x] Implement render in ECS System
     - [x] Render method on system
     - [ ] Control method on user controlled components (we need to refactor the makeGlobalUserInputHandler function in util) 
+- [ ] Find out how logging works in zig
 - [ ] Functions for main loop logic
 - [ ] Render text on menu screens 
 - [ ] Different screens / mode (Menu screen)

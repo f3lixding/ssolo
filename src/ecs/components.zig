@@ -1,6 +1,8 @@
 const util = @import("../util.zig");
 const spc = util.spine_c;
 const sg = @import("sokol").gfx;
+const sokol = @import("sokol");
+const Event = sokol.app.Event;
 
 const Vertex = util.Vertex;
 
@@ -25,6 +27,10 @@ pub const PlayerControlled = struct {
 
 pub const MovementSpeed = struct {
     speed_per_second: f32,
+};
+
+pub const UserInputHandler = struct {
+    handle_event_fn_ptr: *const fn ([*c]const Event, *Renderable, *MovementSpeed, *PlayerControlled, []util.InitBundle) void,
 };
 
 pub fn ComponentId(comptime ComponentType: type) u32 {

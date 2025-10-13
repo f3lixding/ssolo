@@ -169,11 +169,15 @@ export fn init() void {
             }),
         };
         const player_controlled: ecs.components.PlayerControlled = .{};
-        const movement_speed: ecs.components.MovementSpeed = .{ .speed_per_second = 20.0 };
+        const movement_speed: ecs.components.MovementSpeed = .{ .speed_per_second = 200.0 };
+        const input_handler: ecs.components.UserInputHandler = .{
+            .handle_event_fn_ptr = util.handleUserInput,
+        };
 
         entity_bundle.addComponent(render_component) catch unreachable;
         entity_bundle.addComponent(player_controlled) catch unreachable;
         entity_bundle.addComponent(movement_speed) catch unreachable;
+        entity_bundle.addComponent(input_handler) catch unreachable;
 
         const arch = ecs.Archetype.initWithEntityBundle(allocator, &entity_bundle) catch unreachable;
         system.addArchetype(arch) catch unreachable;
