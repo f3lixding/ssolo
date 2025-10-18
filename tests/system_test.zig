@@ -47,7 +47,8 @@ fn getTestSystem() type {
                 }
             }.get_sampler,
             .get_view_fn_ptr = struct {
-                pub fn get_view() sg.View {
+                pub fn get_view(allocator: std.mem.Allocator) sg.View {
+                    _ = allocator;
                     return sg.View{};
                 }
             }.get_view,
@@ -97,7 +98,7 @@ test "system add component" {
     sig_ground_truth[0] = ComponentId(TestComponentOne);
     sig_ground_truth[1] = ComponentId(TestComponentTwo);
     std.mem.sort(u32, &sig_ground_truth, {}, std.sort.asc(u32));
-    std.debug.assert(!sig_one.matches(&sig_ground_truth));
+    std.debug.assert(!sig_one.matches_absolute(&sig_ground_truth));
 }
 
 test "system query" {

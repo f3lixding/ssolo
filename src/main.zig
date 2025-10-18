@@ -36,7 +36,6 @@ const ssolo_log = std.log.scoped(.ssolo);
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const pass_action: sg.PassAction = .{ .colors = [_]sg.ColorAttachmentAction{ .{ .load_action = .CLEAR, .clear_value = .{ .r = 0.2, .g = 0.2, .b = 0.2, .a = 1.0 } }, .{}, .{}, .{} } };
-var renderables: [100]Renderable = undefined;
 var ren_idx: usize = 0;
 var allocator: std.mem.Allocator = undefined;
 var IS_IN_MENU: bool = false;
@@ -195,8 +194,6 @@ export fn frame() void {
     const time_elapsed = sapp.frameDuration();
     _ = time_elapsed;
 
-    ssolo_log.info("Frame called", .{});
-
     system.update() catch unreachable;
     system.render() catch unreachable;
 
@@ -205,10 +202,7 @@ export fn frame() void {
 }
 
 export fn cleanup() void {
-    // We have to do the cleaning before we deinit the gpa otherwise we get memory leak warnings
-    for (0..ren_idx) |i| {
-        renderables[i].deinit();
-    }
+    system.deinit();
     if (builtin.mode == .Debug) {
         // TODO: need to actually surface the leak check here once we have event handler to run the cleanup
         _ = gpa.deinit();

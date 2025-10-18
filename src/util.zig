@@ -689,8 +689,3 @@ pub fn handleUserInput(
         }
     }
 }
-
-test "mock test" {
-    const val = spine_c.abs(0);
-    std.debug.print("val is {d}\n", .{val});
-}

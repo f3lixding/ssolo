@@ -150,7 +150,7 @@ pub const Archetype = struct {
         }
         std.mem.sort(u32, &component_ids, {}, std.sort.asc(u32));
 
-        if (!self.signature.matches(&component_ids)) {
+        if (!self.signature.matches_absolute(&component_ids)) {
             return EntityError.IncompatibleArchetype;
         }
 

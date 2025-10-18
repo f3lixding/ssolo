@@ -45,7 +45,6 @@ pub const ArchetypeSignature = @import("entity.zig").ArchetypeSignature;
 pub const Entity = @import("entity.zig").Entity;
 pub const EntityBundle = @import("entity.zig").EntityBundle;
 pub const ComponentId = @import("components.zig").ComponentId;
-pub const AllComponentCombinations = @import("components.zig").AllComponentCombinations;
 pub const components = @import("components.zig");
 
 const sg = @import("sokol").gfx;

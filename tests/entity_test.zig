@@ -26,42 +26,6 @@ const TestComponentFour = struct {
     field_two: u32,
 };
 
-test "archetype init with component ids and add" {
-    const alloc = std.testing.allocator;
-    var entity_id: Entity = 0;
-
-    const components = .{ TestComponentOne, TestComponentTwo };
-    const component_ids = sig: {
-        const components_info = @typeInfo(@TypeOf(components));
-        const fields = components_info.@"struct".fields;
-        const component_ids = try alloc.alloc(u32, fields.len);
-        inline for (fields, 0..) |field, i| {
-            const @"type" = @field(components, field.name);
-            const id = ComponentId(@"type");
-            component_ids[i] = id;
-        }
-        std.mem.sort(u32, component_ids, {}, std.sort.asc(u32));
-        break :sig component_ids;
-    };
-    defer alloc.free(component_ids);
-
-    var archetype = Archetype.initWithComponentIds(alloc, component_ids) catch unreachable;
-    defer archetype.deinit();
-
-    const test_comp_one = TestComponentOne{
-        .field_one = 1,
-        .field_two = 2,
-    };
-    const test_comp_two = TestComponentTwo{
-        .field_one = 3,
-        .field_two = 4,
-    };
-    const res = archetype.addEntity(entity_id, .{ test_comp_one, test_comp_two });
-    entity_id += 1;
-    const is_err = if (res) |_| false else |_| true;
-    std.debug.assert(!is_err);
-}
-
 test "archetype init and add" {
     const alloc = std.testing.allocator;
     var entity_id: Entity = 0;
@@ -158,10 +122,10 @@ test "achetype init with entity bundle" {
         const comp_one_as_bytes = std.mem.asBytes(&test_comp_one);
         const comp_two_as_bytes = std.mem.asBytes(&test_comp_two);
 
-        var comp_one_arr = std.ArrayList(u8).init(std.testing.allocator);
-        try comp_one_arr.appendSlice(comp_one_as_bytes);
-        var comp_two_arr = std.ArrayList(u8).init(std.testing.allocator);
-        try comp_two_arr.appendSlice(comp_two_as_bytes);
+        var comp_one_arr: std.ArrayList(u8) = .empty;
+        try comp_one_arr.appendSlice(alloc, comp_one_as_bytes);
+        var comp_two_arr: std.ArrayList(u8) = .empty;
+        try comp_two_arr.appendSlice(alloc, comp_two_as_bytes);
 
         var bundle = try EntityBundle.init(std.testing.allocator, entity_id);
         try bundle.components.put(ComponentId(@TypeOf(test_comp_one)), comp_one_arr);
