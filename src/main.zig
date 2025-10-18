@@ -31,6 +31,9 @@ comptime {
     _ = @import("spine_c_impl.zig");
 }
 
+const std_options = @import("log.zig");
+const ssolo_log = std.log.scoped(.ssolo);
+
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const pass_action: sg.PassAction = .{ .colors = [_]sg.ColorAttachmentAction{ .{ .load_action = .CLEAR, .clear_value = .{ .r = 0.2, .g = 0.2, .b = 0.2, .a = 1.0 } }, .{}, .{}, .{} } };
 var renderables: [100]Renderable = undefined;
@@ -191,6 +194,8 @@ export fn frame() void {
     sg.beginPass(.{ .action = pass_action, .swapchain = sglue.swapchain() });
     const time_elapsed = sapp.frameDuration();
     _ = time_elapsed;
+
+    ssolo_log.info("Frame called", .{});
 
     system.update() catch unreachable;
     system.render() catch unreachable;
