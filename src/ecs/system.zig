@@ -167,8 +167,14 @@ pub const System = struct {
 
     /// This is the function that processes the updates that are results of interactivity
     /// i.e. excluding updates of states that are related to spine c runtime
-    pub fn update(self: *Self) SystemError!void {
+    /// Generally this should also be where the main game play loop lives
+    /// As of now I don't really have a good idea as to what they should be but in general I think the following should happen:
+    /// - Collision detection (maybe we can multithread this?)
+    /// - Main game logic such as spawning of new entities, extermination of expired entities
+    /// - In the future when we have netcode, this is also likely the entry point for logic consolidation
+    pub fn update(self: *Self, time: f64) SystemError!void {
         _ = self;
+        _ = time;
     }
 
     pub fn render(self: *Self) !void {

@@ -21,8 +21,8 @@ const assets = @import("assets");
 
 const pda = @import("pda");
 
-pub const WINDOW_WIDTH: i32 = 800;
-pub const WINDOW_HEIGHT: i32 = 600;
+const WINDOW_WIDTH: i32 = 800;
+const WINDOW_HEIGHT: i32 = 600;
 const SAMPLE_COUNT: i32 = 4;
 const WINDOW_TITLE: []const u8 = "ssolo";
 
@@ -81,10 +81,10 @@ export fn init() void {
 
 export fn frame() void {
     sg.beginPass(.{ .action = pass_action, .swapchain = sglue.swapchain() });
-    const time_elapsed = sapp.frameDuration();
-    _ = time_elapsed;
 
-    system.update() catch unreachable;
+    const time_elapsed = sapp.frameDuration();
+
+    system.update(time_elapsed) catch unreachable;
     system.render() catch unreachable;
 
     sg.endPass();
@@ -95,9 +95,10 @@ export fn cleanup() void {
     system.deinit();
 
     if (builtin.mode == .Debug) {
-        // TODO: need to actually surface the leak check here once we have event handler to run the cleanup
+        // Note: we need to deinit here otherwise the memory is not going to be surfaced
         _ = gpa.deinit();
     }
+
     sg.shutdown();
 }
 

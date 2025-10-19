@@ -7,9 +7,10 @@ const assets = @import("assets");
 const sapp = @import("sokol").app;
 
 const Event = sapp.Event;
-const RenderableComponent = @import("ecs/components.zig").Renderable;
-const MovementSpeed = @import("ecs/components.zig").MovementSpeed;
-const PlayerControlled = @import("ecs/components.zig").PlayerControlled;
+const ecs = @import("ecs/root.zig");
+const RenderableComponent = ecs.components.Renderable;
+const MovementSpeed = ecs.components.MovementSpeed;
+const PlayerControlled = ecs.components.PlayerControlled;
 
 pub const spine_c = @cImport({
     @cInclude("spine/spine.h");
@@ -619,14 +620,7 @@ pub fn render(
 
 var captured_system: *anyopaque = undefined;
 
-pub fn makeGlobalUserInputHandler(system: anytype) *const fn ([*c]const Event) callconv(.c) void {
-    comptime {
-        const info = @typeInfo(@TypeOf(system));
-        if (info != .pointer) @compileError("System passed in needs to be of pointer type");
-        const T = info.pointer.child;
-        if (!@hasDecl(T, "handleUserInput")) @compileError("System passed in does not implement handle user input");
-    }
-
+pub fn makeGlobalUserInputHandler(system: *ecs.System) *const fn ([*c]const Event) callconv(.c) void {
     captured_system = system;
 
     const SystemType = @TypeOf(system);

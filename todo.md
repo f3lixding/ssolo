@@ -2,7 +2,6 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
-- [ ] Organize init routine to encapsulate individual resource initialization
 - [ ] Restore menu screens in ECS
 - [ ] Restore cursor in ECS
 - [ ] Render text on menu screens 
@@ -22,6 +21,7 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 - [ ] Refactor the remove / addition routine for components to make use of dense arrays (as of now the design requires way too many allocations)
 
 ## DONE
+- [x] Organize init routine to encapsulate individual resource initialization
 - [x] Draw order enforcement
 - [x] Decouple util functions from alien asset
 - [x] Find out how logging works in zig
