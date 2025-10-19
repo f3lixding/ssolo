@@ -21,6 +21,20 @@ pub const Renderable = struct {
     world_vertices_pos: [MAX_VERTICES_PER_ATTACHMENT]f32 = undefined,
 };
 
+pub const MenuPage = struct {
+    const std = @import("std");
+    const PushdownAutomaton = @import("pda").Pda;
+    const Allocator = std.mem.Allocator;
+
+    world_level_id: usize,
+    pda: PushdownAutomaton,
+    top_left_coord: [2]f32,
+    height: i32,
+    width: i32,
+    vertex_buffer: sg.Buffer,
+    index_buffer: sg.Buffer,
+};
+
 pub const PlayerControlled = struct {
     is_enabled: bool = true,
 };

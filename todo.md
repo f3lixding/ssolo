@@ -2,16 +2,17 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
-- [ ] Functions for main loop logic
+- [ ] Organize init routine to encapsulate individual resource initialization
+- [ ] Restore menu screens in ECS
+- [ ] Restore cursor in ECS
 - [ ] Render text on menu screens 
+- [ ] Functions for main loop logic
 - [ ] Different screens / mode (Menu screen)
 - [ ] Share states between cursor and menu screen (or any other components since cursor position is probably going to be used by everything)
 - [ ] Reactive buttons
-- [ ] Decouple util functions from alien asset
 - [ ] Add states to alternate screens
 - [ ] Add a function for state updates that are depended on neighboring entities (i.e. collision detection)
 - [ ] Optimize Renderable interface so that so fail fast does not have to be done south of the VTable
-- [ ] Draw order enforcement
 - [ ] Background rendering
 - [ ] Handling of in game events for different objects (or the interface of it)
 - [ ] Particle effects / individual shaders
@@ -21,6 +22,8 @@ Some of these are not strictly related to the project (e.g. it could be zig rela
 - [ ] Refactor the remove / addition routine for components to make use of dense arrays (as of now the design requires way too many allocations)
 
 ## DONE
+- [x] Draw order enforcement
+- [x] Decouple util functions from alien asset
 - [x] Find out how logging works in zig
 - [x] Rewrite in ECS(?). Right now the interfaces isn't all that typical of a game engine. 
 - [x] Add a proper test harness that is capabale of running the tests that has external dependencies (reference zigimg for this)

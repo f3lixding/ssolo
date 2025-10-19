@@ -23,47 +23,43 @@ const TestComponentTwo = struct {
     field_four: u32,
 };
 
-fn getTestSystem() type {
-    const test_ctx =
-        ecs.RenderContext{
-            .get_init_bundle_fn_ptr = struct {
-                pub fn getInitBundle() !InitBundle {
-                    // These are dangling pointers
-                    // DO NOT try to use them for any of tests
-                    return .{
-                        .animation_state_data = @constCast(@as(*const spc.spAnimationStateData, &.{})),
-                        .skeleton_data = @constCast(@as(*const spc.spSkeletonData, &.{})),
-                    };
-                }
-            }.getInitBundle,
-            .get_pip_fn_ptr = struct {
-                pub fn get_pip() sg.Pipeline {
-                    return sg.Pipeline{};
-                }
-            }.get_pip,
-            .get_sampler_fn_ptr = struct {
-                pub fn get_sampler() sg.Sampler {
-                    return sg.Sampler{};
-                }
-            }.get_sampler,
-            .get_view_fn_ptr = struct {
-                pub fn get_view(allocator: std.mem.Allocator) sg.View {
-                    _ = allocator;
-                    return sg.View{};
-                }
-            }.get_view,
-        };
-
-    return ecs.System(10, &[_]ecs.RenderContext{test_ctx});
+fn getTestRenderCtx() []const ecs.RenderContext {
+    return &[_]ecs.RenderContext{.{
+        .get_init_bundle_fn_ptr = struct {
+            pub fn getInitBundle() !InitBundle {
+                // These are dangling pointers
+                // DO NOT try to use them for any of tests
+                return .{
+                    .animation_state_data = @constCast(@as(*const spc.spAnimationStateData, &.{})),
+                    .skeleton_data = @constCast(@as(*const spc.spSkeletonData, &.{})),
+                };
+            }
+        }.getInitBundle,
+        .get_pip_fn_ptr = struct {
+            pub fn get_pip() sg.Pipeline {
+                return sg.Pipeline{};
+            }
+        }.get_pip,
+        .get_sampler_fn_ptr = struct {
+            pub fn get_sampler() sg.Sampler {
+                return sg.Sampler{};
+            }
+        }.get_sampler,
+        .get_view_fn_ptr = struct {
+            pub fn get_view(allocator: std.mem.Allocator) sg.View {
+                _ = allocator;
+                return sg.View{};
+            }
+        }.get_view,
+    }};
 }
 
 test "system init" {
-    const System = getTestSystem();
-    _ = System.init(alloc) catch unreachable;
+    _ = ecs.System.init(alloc, getTestRenderCtx()) catch unreachable;
 }
 
 test "system add component" {
-    var system = getTestSystem().init(alloc) catch unreachable;
+    var system = ecs.System.init(alloc, getTestRenderCtx()) catch unreachable;
     defer system.deinit();
 
     const component_types = .{TestComponentOne};
@@ -102,7 +98,7 @@ test "system add component" {
 }
 
 test "system query" {
-    var system = getTestSystem().init(alloc) catch unreachable;
+    var system = ecs.System.init(alloc, getTestRenderCtx()) catch unreachable;
     defer system.deinit();
 
     // Set up by inserting into the system components

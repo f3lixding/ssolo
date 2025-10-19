@@ -52,6 +52,7 @@ const InitBundle = @import("../util.zig").InitBundle;
 const std = @import("std");
 
 pub const RenderContext = struct {
+    get_init_routine_fn_ptr: ?*const fn (system: *System, usize) void = null,
     get_init_bundle_fn_ptr: *const fn () anyerror!InitBundle,
     get_pip_fn_ptr: *const fn () sg.Pipeline,
     get_sampler_fn_ptr: *const fn () sg.Sampler,
