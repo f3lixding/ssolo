@@ -7,10 +7,10 @@ pub fn build(b: *Build) void {
 
     const lib = b.addLibrary(.{
         .name = "spine-c",
+        .linkage = .static,
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
-            .link_libc = true,
         }),
     });
 
