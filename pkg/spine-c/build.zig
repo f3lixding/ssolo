@@ -7,8 +7,8 @@ pub fn build(b: *Build) void {
 
     const lib = b.addLibrary(.{
         .name = "spine-c",
-        .linkage = .static,
         .root_module = b.createModule(.{
+            .root_source_file = b.path("src/root.zig"),
             .target = target,
             .optimize = optimize,
         }),
@@ -49,7 +49,6 @@ const src: []const []const u8 = &.{
     "src/spine/IkConstraint.c",
     "src/spine/IkConstraintData.c",
     "src/spine/Json.c",
-    "src/spine/Json.h",
     "src/spine/MeshAttachment.c",
     "src/spine/PathAttachment.c",
     "src/spine/PathConstraint.c",

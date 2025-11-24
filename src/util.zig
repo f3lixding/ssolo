@@ -668,14 +668,18 @@ pub fn handleUserInput(
             .A, .LEFT => {
                 const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
                 const state = renderable.animation_state;
-                _ = spine_c.spAnimationState_setAnimation(state, 0, animation, 0);
+                if (animation) |anim| {
+                    _ = spine_c.spAnimationState_setAnimation(state, 0, anim, 0);
+                }
                 skeleton.scaleX = -1.0;
                 skeleton.x -= move_delta;
             },
             .D, .RIGHT => {
                 const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
                 const state = renderable.animation_state;
-                _ = spine_c.spAnimationState_setAnimation(state, 0, animation, 0);
+                if (animation) |anim| {
+                    _ = spine_c.spAnimationState_setAnimation(state, 0, anim, 0);
+                }
                 skeleton.scaleX = 1.0;
                 skeleton.x += move_delta;
             },

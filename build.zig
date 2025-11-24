@@ -68,6 +68,12 @@ pub fn build(b: *std.Build) void {
     bin_to_add.root_module.addImport("zigimg", zigimg_dep.module("zigimg"));
     bin_to_add.root_module.addImport("pda", pda_dep.module("pda"));
 
+    bin_to_add.linkSystemLibrary("GL");
+    bin_to_add.linkSystemLibrary("X11");
+    bin_to_add.linkSystemLibrary("Xi");
+    bin_to_add.linkSystemLibrary("Xcursor");
+    bin_to_add.linkSystemLibrary("asound");
+
     if (!no_bin) {
         b.installArtifact(bin_to_add);
     } else {

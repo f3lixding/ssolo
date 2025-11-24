@@ -46,9 +46,16 @@ pub fn systemInitRoutine(system: *ecs.System, world_level_id: usize) void {
     const animation_state_data = init_bundle.animation_state_data;
 
     const skeleton = spc.spSkeleton_create(skeleton_data);
-    const animation = spc.spSkeletonData_findAnimation(skeleton_data, "hit");
     const state = spc.spAnimationState_create(animation_state_data);
-    _ = spc.spAnimationState_setAnimation(state, 0, animation, 0);
+    
+    // Initialize tracks array to prevent null pointer error on Linux
+    state.*.tracks = @ptrCast(@alignCast(spc._spCalloc(1, @sizeOf(?*spc.spTrackEntry), "", 0)));
+    state.*.tracksCount = 1;
+    
+    const animation = spc.spSkeletonData_findAnimation(skeleton_data, "hit");
+    if (animation) |anim| {
+        _ = spc.spAnimationState_setAnimation(state, 0, anim, 0);
+    }
 
     const render_component = RenderableComponent{
         .world_level_id = 0,
