@@ -56,6 +56,12 @@
           '';
         };
 
-        devShells.default = pkgs.mkShell { inherit buildInputs; };
+        devShells.default = pkgs.mkShell {
+          inherit buildInputs;
+
+          shellHook = ''
+            exec ${pkgs.zsh}/bin/zsh
+          '';
+        };
       });
 }

@@ -95,7 +95,7 @@ export fn cleanup() void {
     system.deinit();
 
     if (builtin.mode == .Debug) {
-        // Note: we need to deinit here otherwise the memory is not going to be surfaced
+        // Note: we need to deinit here otherwise any memory leaks is not going to be surfaced
         _ = gpa.deinit();
     }
 
