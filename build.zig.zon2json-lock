@@ -1,0 +1,26 @@
+{
+  "sokol-0.1.0-pb1HKxJXLgBKflhCWXcg_DlWLzXbdWRfVI-Sq7ro3uPY": {
+    "name": "sokol",
+    "url": "git+https://github.com/floooh/sokol-zig.git#d51112b664a37e79010bf1f1ef0a0d27254b789e",
+    "hash": "sha256-1aZCH+NW6I8HszuwZMVHDTNv7aAYVMSq7yZ8zfsmnUM=",
+    "rev": "d51112b664a37e79010bf1f1ef0a0d27254b789e"
+  },
+  "N-V-__8AAMGsDwC6L1OfDgzRF1zFI2t-CaR0sVhEm8pmrpxm": {
+    "name": "emsdk",
+    "url": "git+https://github.com/emscripten-core/emsdk?ref=4.0.14#eff90ca04a3785f571a8095b3a42b63799cf384a",
+    "hash": "sha256-BMAiml5apI/zNTcq1ltRdCzFL43IXoBFO2LAwFLSikM=",
+    "rev": "eff90ca04a3785f571a8095b3a42b63799cf384a"
+  },
+  "sokolshdc-0.1.0-r2KZDtYXlQS2C2CNekXgsRqhyKk5JtGzBlFBTMX27o0f": {
+    "name": "shdc",
+    "url": "git+https://github.com/floooh/sokol-tools-bin#d1a6a719f24852f104a7f5481beb31e42ebf5f8a",
+    "hash": "sha256-jjEbL6NQbY4qqL7Rp4XadcIQAbNB+EiP8NI4ViVSNMk=",
+    "rev": "d1a6a719f24852f104a7f5481beb31e42ebf5f8a"
+  },
+  "zigimg-0.1.0-8_eo2jNrFQD4mu3EAUkfQRmCkyfprdIXc8JQ6uyxhjSQ": {
+    "name": "zigimg",
+    "url": "git+https://github.com/zigimg/zigimg.git#362cdd6bce109f7bc674be134cddd378f52da5d4",
+    "hash": "sha256-Pe7OAtocaH18FhpSwz3NNZLrBI9BS1rfOehq2UVmu6g=",
+    "rev": "362cdd6bce109f7bc674be134cddd378f52da5d4"
+  }
+}
