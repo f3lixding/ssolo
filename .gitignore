@@ -1,3 +1,7 @@
 /zig-out
+zig-cache/
 .zig-cache/
+.zig
+pkg/spine-c/zig-out/
+pkg/spine-c/.zig-cache
 result
