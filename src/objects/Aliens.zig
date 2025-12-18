@@ -20,6 +20,7 @@ const ASSET_FILE_STEM: []const u8 = "alien_ess";
 const MAX_ELEMENT: u64 = 10000;
 const MAX_VERTICES_PER_ATTACHMENT = util.MAX_VERTICES_PER_ATTACHMENT;
 
+// Impl RenderContext Component
 get_system_init_fn_ptr: *const fn (*ecs.System, usize) void = systemInitRoutine,
 get_init_bundle_fn_ptr: *const fn () anyerror!util.InitBundle = getInitBundle,
 get_pip_fn_ptr: *const fn () sg.Pipeline = getPip,
@@ -40,6 +41,8 @@ pub fn systemInitRoutine(system: *ecs.System, world_level_id: usize) void {
     const RenderableComponent = ecs.components.Renderable;
     const allocator = system.alloc;
 
+    // TODO: This is wrong. entity_id is to be globally unique. We would need a queue or a vendor to vend these ids to ensure global uniqueness
+    // Maybe we would need like a global id vending service or something
     var entity_bundle = ecs.EntityBundle.init(allocator, 0) catch unreachable;
     const init_bundle = &system.init_bundles[world_level_id];
     const skeleton_data = init_bundle.skeleton_data;
@@ -47,11 +50,11 @@ pub fn systemInitRoutine(system: *ecs.System, world_level_id: usize) void {
 
     const skeleton = spc.spSkeleton_create(skeleton_data);
     const state = spc.spAnimationState_create(animation_state_data);
-    
+
     // Initialize tracks array to prevent null pointer error on Linux
     state.*.tracks = @ptrCast(@alignCast(spc._spCalloc(1, @sizeOf(?*spc.spTrackEntry), "", 0)));
     state.*.tracksCount = 1;
-    
+
     const animation = spc.spSkeletonData_findAnimation(skeleton_data, "hit");
     if (animation) |anim| {
         _ = spc.spAnimationState_setAnimation(state, 0, anim, 0);

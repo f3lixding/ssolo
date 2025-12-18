@@ -17,8 +17,8 @@
 
           src = pkgs.fetchurl {
             url =
-              "https://github.com/floooh/sokol-tools-bin/raw/master/bin/linux/sokol-shdc";
-            sha256 = "1qpm8rp1dgidllq563njwrjrg1w2nk9j4akvjc0qhjhxqj60pi8x";
+              "https://github.com/floooh/sokol-tools-bin/blob/02635ac02d750c902014d23cba1aa2f1f779d78b/bin/linux/sokol-shdc";
+            sha256 = "1892lc0zz1n2q0x4pcbgq5yg34igdz23gp0x87dfrcl4y13c71v4";
           };
 
           dontUnpack = true;

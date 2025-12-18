@@ -31,6 +31,7 @@
 //! This is the id that is used to represent an instance of an object. As per ECS operating philosophy, therer are no behavior, no data directly
 //! attached to the Entity. It merely serves as a key with which queries are to be made for info about the Entity.
 //! Entities are to be stored in their respective Achetypes.
+//! Entities are globally unique (assuming we only have one system)!
 //!
 //! ## Entity Location
 //! Because Entities are not directly stored in System, the whereabouts of an Entity need to be declared. If an event for removal is called
@@ -51,6 +52,27 @@ const sg = @import("sokol").gfx;
 const InitBundle = @import("../util.zig").InitBundle;
 const std = @import("std");
 
+/// An interface to package all things render related (though if we are saying every entity would be required to be rendered perhaps we should rename this to something more appropriate like "InitContext" or something)
+/// Every callback here is called once during init and they all produce world level resources (i.e. not associated to any particular instance)
+///
+/// **get_init_routine_fn_ptr**
+/// - callback for object to register its initialization logic.
+/// - It accepts a system (which will be mutated for the registration) and an index for the world level resource index
+///
+/// **get_init_routine_fn_ptr**
+/// - callback for obtaining the associated `InitBundle`, which are world level resources, which currently is limited to world level resources needed for render like `spSkeletonData` and `spAnimationStateData`
+/// - This is then used in input handler (maybe we will generalize this in the future but this is needed because input affects what we render)
+///
+/// **get_pip_fn_ptr**
+/// - callback for obtaining render pipeline
+///
+/// **get_sampler_fn_ptr**
+/// - callback for obtaining sampler
+/// - This is sokol related
+///
+/// **get_view_fn_ptr**
+/// - callback for obtaining view (i.e. sprites)
+/// - This is sokol related
 pub const RenderContext = struct {
     get_init_routine_fn_ptr: ?*const fn (system: *System, usize) void = null,
     get_init_bundle_fn_ptr: *const fn () anyerror!InitBundle,

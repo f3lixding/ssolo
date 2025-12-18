@@ -25,6 +25,7 @@ pub const Vertex = struct {
     v: f32,
 };
 
+/// Object level resources that is to be shared between all instances of the same object
 pub const InitBundle = struct {
     skeleton_data: *spine_c.spSkeletonData,
     animation_state_data: *spine_c.spAnimationStateData,

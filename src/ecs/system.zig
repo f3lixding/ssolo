@@ -59,6 +59,11 @@ pub const System = struct {
     entity_locations: EntityLocationsMap,
     next_entity_id: u32 = 0,
 
+    /// Initializes the system in the ECS.
+    /// We might need to expand this in the future but for now we have the following:
+    ///
+    /// **RenderContext**
+    /// - A collection of info the system needs to render every frame
     pub fn init(alloc: std.mem.Allocator, render_ctxs: []const RenderContext) SystemError!Self {
         var self: Self = .{
             .alloc = alloc,
