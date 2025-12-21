@@ -161,6 +161,7 @@ pub fn run_sokol_shdc(
 fn generate_asset_files(b: *std.Build, force_codegen: bool) !void {
     // first we need to scan the time stamps of the asset files
     var assets_dir = try std.fs.cwd().openDir("assets", .{ .iterate = true });
+    defer assets_dir.close();
 
     const should_proceed = should_run: {
         if (force_codegen) {
@@ -187,7 +188,6 @@ fn generate_asset_files(b: *std.Build, force_codegen: bool) !void {
     };
 
     if (!should_proceed) {
-        assets_dir.close();
         return;
     }
 
