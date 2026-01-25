@@ -2,6 +2,7 @@
 Some of these are not strictly related to the project (e.g. it could be zig related)-->
 
 ## TODO
+- [ ] Refine set animation pipeline
 - [ ] Restore menu screens in ECS
 - [ ] Restore cursor in ECS
 - [ ] Render text on menu screens 

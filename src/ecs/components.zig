@@ -35,8 +35,17 @@ pub const MenuPage = struct {
     index_buffer: sg.Buffer,
 };
 
+pub const Direction = enum {
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+    REST,
+};
+
 pub const PlayerControlled = struct {
     is_enabled: bool = true,
+    direction: Direction = .REST,
 };
 
 pub const MovementSpeed = struct {

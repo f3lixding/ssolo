@@ -653,38 +653,72 @@ pub fn handleUserInput(
     const dt = sapp.frameDuration();
     const move_delta = movement_speed.speed_per_second * @as(f32, @floatCast(dt));
 
+    const world_level_id = renderable.world_level_id;
+    const skeleton_data = &bundle[world_level_id].skeleton_data;
+    const skeleton = renderable.skeleton;
+
     // Handle key presses
     if (evt.type == .KEY_DOWN) {
-        const world_level_id = renderable.world_level_id;
-        const skeleton_data = &bundle[world_level_id].skeleton_data;
-        const skeleton = renderable.skeleton;
-
         switch (evt.key_code) {
             .W, .UP => {
+                if (player_controlled.direction != .UP) {
+                    player_controlled.direction = .UP;
+                    const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
+                    const state = renderable.animation_state;
+                    if (animation) |anim| {
+                        _ = spine_c.spAnimationState_setAnimation(state, 0, anim, 1);
+                    }
+                }
                 renderable.skeleton.y += move_delta;
             },
+
             .S, .DOWN => {
+                if (player_controlled.direction != .DOWN) {
+                    player_controlled.direction = .DOWN;
+                    const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
+                    const state = renderable.animation_state;
+                    if (animation) |anim| {
+                        _ = spine_c.spAnimationState_setAnimation(state, 0, anim, 1);
+                    }
+                }
                 renderable.skeleton.y -= move_delta;
             },
+
             .A, .LEFT => {
-                const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
-                const state = renderable.animation_state;
-                if (animation) |anim| {
-                    _ = spine_c.spAnimationState_setAnimation(state, 0, anim, 0);
+                if (player_controlled.direction != .LEFT) {
+                    player_controlled.direction = .LEFT;
+                    const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
+                    const state = renderable.animation_state;
+                    if (animation) |anim| {
+                        _ = spine_c.spAnimationState_setAnimation(state, 0, anim, 1);
+                    }
                 }
                 skeleton.scaleX = -1.0;
                 skeleton.x -= move_delta;
             },
+
             .D, .RIGHT => {
-                const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
-                const state = renderable.animation_state;
-                if (animation) |anim| {
-                    _ = spine_c.spAnimationState_setAnimation(state, 0, anim, 0);
+                if (player_controlled.direction != .RIGHT) {
+                    std.debug.print("new right\n", .{});
+                    player_controlled.direction = .RIGHT;
+                    const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
+                    const state = renderable.animation_state;
+                    if (animation) |anim| {
+                        _ = spine_c.spAnimationState_setAnimation(state, 0, anim, 1);
+                    }
                 }
                 skeleton.scaleX = 1.0;
                 skeleton.x += move_delta;
             },
+
             else => {},
+        }
+    } else if (evt.type == .KEY_UP) {
+        player_controlled.direction = .REST;
+        const animation = spine_c.spSkeletonData_findAnimation(skeleton_data.*, "run");
+        const state = renderable.animation_state;
+        if (animation) |anim| {
+            _ = spine_c.spAnimationState_setAnimation(state, 0, anim, 0);
         }
     }
 }
